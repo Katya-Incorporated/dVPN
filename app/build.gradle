@@ -78,12 +78,12 @@ android {
       //Configurations for custom branded app.
 
       //Change the package name as needed, e.g. "org.example.myapp"
-      applicationId "se.leap.riseupvpn"
+      applicationId "org.calyxinstitute.vpn"
       //Set app name here
-      appName = "Riseup VPN"
+      appName = "Calyx VPN"
       resValue "string", "app_name", appName
       //Provider base url, e.g. '"https://example.com"'
-      def customProviderUrl = '"https://riseup.net"'
+      def customProviderUrl = '"https://calyx.net"'
       buildConfigField "String", "customProviderUrl", customProviderUrl
       //Change the versionCode as needed
       //versionCode 1
@@ -91,12 +91,12 @@ android {
       //versionName "0.9.9RC1"
 
       //skip the account creation / login screen if the provider offers anonymous vpn usage, use directly the anonymous cert instead
-      buildConfigField 'boolean', 'priotize_anonymous_usage', 'true'
+      buildConfigField 'boolean', 'priotize_anonymous_usage', 'false'
 
       //Build Config Fields for default donation details
 
       //This is the donation URL and should be set to the relevant donation page.
-      buildConfigField 'String', 'donation_url', '"https://riseup.net/vpn/donate"'
+      buildConfigField 'String', 'donation_url', '"https://calyxinstitute.org"'
       //The field to enable donations in the app.
       buildConfigField 'boolean', 'enable_donation', 'true'
       //The field to enable donation reminder popup in the app if enable_donation is set to 'false' this will be disabled.
@@ -434,7 +434,7 @@ def getCurrentFlavor() {
 
 task checkApplicationIdForCustomFlavor(type: Exec) {
   def currFlavor = getCurrentFlavor()
-  if (currFlavor.contains("custom")) {
+  if (currFlavor.startsWith("custom")) {
     android.applicationVariants.all { variant ->
       def mergedFlavor = variant.mergedFlavor
       if (variant.flavorName.toString().equalsIgnoreCase(currFlavor) &&
