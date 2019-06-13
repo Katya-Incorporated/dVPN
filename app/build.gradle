@@ -93,7 +93,7 @@ android {
       //versionName "0.9.9RC1"
 
       //skip the account creation / login screen if the provider offers anonymous vpn usage, use directly the anonymous cert instead
-      buildConfigField 'boolean', 'priotize_anonymous_usage', 'false'
+      buildConfigField 'boolean', 'priotize_anonymous_usage', 'true'
 
       //Build Config Fields for default donation details
 
