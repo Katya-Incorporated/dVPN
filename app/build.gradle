@@ -557,7 +557,7 @@ task updateIcsOpenVpn( type: Exec ) {
 
 def getTag() {
   String commit = "git log --pretty=format:'%h' -n 1".execute().text.trim().replaceAll("'", "")
-  return ("git describe --tags --exact-match "+ commit).execute().text.trim()
+  return ("git describe --tags --exact-match "+ commit).execute().text.trim().replaceAll("calyx/", "")
 }
 
 
