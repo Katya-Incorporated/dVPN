@@ -4,23 +4,28 @@ import java.util.regex.Pattern
 apply plugin: 'com.android.application'
 
 android {
-  compileSdkVersion 30
+  compileSdkVersion 31
   ndkVersion "21.4.7075529"
-  buildToolsVersion '30.0.3'
+  buildToolsVersion '31.0.0'
 
   compileOptions {
     targetCompatibility 1.8
     sourceCompatibility 1.8
   }
 
+  viewBinding {
+    enabled = true
+  }
+
   defaultConfig {
     applicationId "se.leap.bitmaskclient"
     // the factor 1000 is used so that gplay users can upgrade from split apks ((current version number - 1) * 1000) + n
     // to extracted bundle apks, supplied by google
-    versionCode 160 * 1000
-    versionName "1.1.2"
-    minSdkVersion 16
-    targetSdkVersion 30
+    // however we don't calculate the versionCode here, because F-Droid doesn't like that
+    versionCode 169000
+    versionName "1.1.8"
+    minSdkVersion 21
+    targetSdkVersion 31
     vectorDrawables.useSupportLibrary = true
     buildConfigField 'boolean', 'openvpn3', 'false'
 
@@ -29,19 +34,26 @@ android {
 
     //This is the default donation URL and should be set to the donation page of LEAP
     // and this should not be set/altered anywhere else.
-    buildConfigField 'String', 'default_donation_url', '"https://leap.se/donate/"'
+    buildConfigField 'String', 'default_donation_url', '"https://riseuplabs.org/leap"'
     //The field to enable donations in the app.
     buildConfigField 'boolean', 'enable_donation', 'false'
     //The field to enable donation reminder popup in the app if enable_donation is set to 'false' this will be disabled.
-    buildConfigField 'boolean', 'enable_donation_reminder', 'false'
+    buildConfigField 'boolean', 'enable_donation_reminder', 'true'
     //The duration in days to trigger the donation reminder
-    buildConfigField 'int', 'donation_reminder_duration', '30'
+    buildConfigField 'int', 'donation_reminder_duration', '7'
     //skip the account creation / login screen if the provider offers anonymous vpn usage, use directly the anonymous cert instead
     buildConfigField 'boolean', 'priotize_anonymous_usage', 'false'
     //allow manual gateway selection
     buildConfigField 'boolean', 'allow_manual_gateway_selection', 'true'
-    // grey out background in EipFragment (main screen) if VPN is not running
-    buildConfigField 'boolean', 'use_color_filter', 'true'
+    // decide if we use obfsvpn or shapeshifter as obfs4 lib
+    buildConfigField 'boolean', 'use_obfsvpn', 'true'
+    // obfsvpn Debugging config fields to pin and configure a particular proxy
+    buildConfigField "String", "obfsvpn_port", '""'
+    buildConfigField "String", "obfsvpn_ip", '""'
+    buildConfigField "String", "obfsvpn_cert", '""'
+    buildConfigField 'boolean', 'obfsvpn_use_kcp', 'false'
+    // default to UDP usage
+    buildConfigField 'boolean', 'prefer_udp', 'false'
 
     // static update url pointing to the latest stable release apk
     buildConfigField "String", "update_apk_url", '"https://dl.bitmask.net/client/android/Bitmask-Android-latest.apk"'
@@ -50,12 +62,17 @@ android {
     // the version file contains the versionCode of the latest release
     buildConfigField "String", "version_file_url", '"https://dl.bitmask.net/client/android/versioncode.txt"'
 
+    // if center_actionbar_title is set to true, the actionbar title and subtitle will be centered, otherwise default
+    buildConfigField 'boolean', 'actionbar_center_title', 'true'
+    buildConfigField 'boolean', 'actionbar_capitalize_title', 'true'
+
     //ignore the following configs, only used in custom flavor
     buildConfigField 'String', 'donation_url', 'null'
     buildConfigField "String", "customProviderUrl", '""'
     buildConfigField "String", "customProviderIp", '""'
     buildConfigField "String", "customProviderApiIp", '""'
     buildConfigField "String", "geoipUrl", '""'
+    buildConfigField "String", "customProviderMotdUrl", '""'
 
     testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     dexOptions {
@@ -114,13 +131,16 @@ android {
       def customProviderUrl = '"https://calyx.net"'
       buildConfigField "String", "customProviderUrl", customProviderUrl
       //static ip address of provider, using a commercially validated CA certificate to serve the provider.json
-      def customProviderIp = '"198.252.153.70"'
+      def customProviderIp = '""'
       buildConfigField "String", "customProviderIp", customProviderIp
       //static ip address of the provider api, using a self signed certificate to serve provider.json, eip-service.json etc.
-      def customProviderApiIp = '"198.252.153.107"'
+      def customProviderApiIp = '""'
       buildConfigField "String", "customProviderApiIp", customProviderApiIp
-      def geoipUrl = '"https://api.black.riseup.net:9001/json"'
+      def geoipUrl = '"https://menshen.riseup.net/json"'
       buildConfigField "String", "geoipUrl", geoipUrl
+      //URL for the message of the day, see https://0xacab.org/leap/motd#motd-message-of-the-day
+      //def customProviderMotdUrl = '"https://static.riseup.net/vpn/motd.json"'
+      //buildConfigField "String", "customProviderMotdUrl", customProviderMotdUrl
       //Change the versionCode as needed
       //versionCode 1
       //Change the versionName as needed
@@ -130,8 +150,15 @@ android {
       buildConfigField 'boolean', 'priotize_anonymous_usage', 'true'
       //allow manual gateway selection
       buildConfigField 'boolean', 'allow_manual_gateway_selection', 'true'
-      // grey out background in EipFragment (main screen) if VPN is not running
-      buildConfigField 'boolean', 'use_color_filter', 'false'
+      // decide if we use obfsvpn or shapeshifter as obfs4 lib
+      buildConfigField 'boolean', 'use_obfsvpn', 'true'
+      // obfsvpn Debugging config fields to pin and configure a particular proxy
+      buildConfigField "String", "obfsvpn_port", '"443"'
+      buildConfigField "String", "obfsvpn_ip", '"159.223.173.205"'
+      buildConfigField "String", "obfsvpn_cert", '"8nuAbPJwFrKc/29KcCfL5LBuEWxQrjBASYXdUbwcm9d9pKseGK4r2Tg47e23+t6WghxGGw"'
+      buildConfigField 'boolean', 'obfsvpn_use_kcp', 'true'
+      // default to UDP usage
+      buildConfigField 'boolean', 'prefer_udp', 'true'
 
       //Build Config Fields for automatic apk update checks
 
@@ -153,7 +180,13 @@ android {
       //The field to enable donation reminder popup in the app if enable_donation is set to 'false' this will be disabled.
       buildConfigField 'boolean', 'enable_donation_reminder', 'true'
       //The duration in days to trigger the donation reminder
-      buildConfigField 'int', 'donation_reminder_duration', '30'
+      buildConfigField 'int', 'donation_reminder_duration', '7'
+
+      // ActionBar design
+
+      // if center_actionbar_title is set to true, the actionbar title and subtitle will be centered, otherwise default
+      buildConfigField 'boolean', 'actionbar_center_title', 'true'
+      buildConfigField 'boolean', 'actionbar_capitalize_title', 'false'
 
       // Build apks for each architecture, in addition to one 'fat' apk containing libraries for all all architectures
       // enable this if you're publishing in gplay
@@ -262,15 +295,13 @@ android {
       assets.srcDirs = ['assets',
                         'ovpnlibs/assets',
                         '../ics-openvpn/main/build/ovpnassets',
-                        // '../go/out' TODO: uncomment this line as soon as we want to use PT in production
                         ]
       jniLibs.srcDirs = ['../ics-openvpn/main/build/intermediates/cmake/skeletonRelease/obj/']
       jni.srcDirs = [] //disable automatic ndk-build
 
     }
     debug {
-      assets.srcDirs = ['src/debug/assets',
-                        /*'../go/out'*/]
+      assets.srcDirs = ['src/debug/assets']
     }
 
     test {
@@ -317,7 +348,6 @@ android {
    * normalProductionFatDebug -> Bitmask development build, includes all ABIS
    * customProductionFatwebDebug -> branded development build, includes all ABIs, for distribution through a download page
    * normalProductionFatWebDebug ->  Bitmask development build, includes all ABIS, for distribution through a download page
-   * customInsecureFatDebug -> branded development build, doesn't checks certificates (for test server setup w/o valid certificates), includes all ABIs
    * normalInsecureFatDebug -> Bitmask development build, doesn't checks certificates (for test server setup w/o valid certificates), includes all ABIs
    *
    * Branded Releases:
@@ -350,10 +380,12 @@ android {
     def buildTypeName = variant.buildType.name
     // flavorDimensions "branding" -> 0, "implementation" -> 1, "abi" -> 2
     def supportsSplitApk = variant.flavors[0].splitApk
+    def branding = variant.flavors[0].name
     // To check for a certain build type, use variant.buildType.name == "<buildType>"
     if (((names.contains("insecure") && !names.contains("fat")) ||
             (names.contains("insecure") && buildTypeName.contains("beta")) ||
             (names.contains("insecure") && buildTypeName.contains("release")) ||
+            (names.contains("insecure") && branding.contains("custom")) ||
             (buildTypeName.contains("debug") && !(names.contains("fatweb") || names.contains("fat"))) ||
             (names.contains("fatweb") && buildTypeName.contains("beta")) ||
             (!supportsSplitApk && !names.contains("fat")))
@@ -385,9 +417,7 @@ dependencies {
   //TODO: remove that library
   androidTestImplementation 'com.jayway.android.robotium:robotium-solo:5.6.3'
   testImplementation 'org.json:json:20180813'
-  debugImplementation 'com.squareup.leakcanary:leakcanary-android:1.6.2'
-  releaseImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.6.2'
-  betaImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.6.2'
+  debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.9.1'
   annotationProcessor 'com.jakewharton:butterknife-compiler:10.2.3'
   annotationProcessor 'com.squareup.dagger:dagger-compiler:1.2.2'
   implementation 'com.jakewharton:butterknife:10.2.1'
@@ -397,15 +427,15 @@ dependencies {
   implementation 'com.google.code.gson:gson:2.8.6'
   implementation 'com.squareup.okhttp3:okhttp:3.12.12'
   implementation 'androidx.legacy:legacy-support-core-utils:1.0.0'
-  implementation 'androidx.annotation:annotation:1.1.0'
+  implementation 'androidx.annotation:annotation:1.4.0'
   implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-  implementation 'androidx.appcompat:appcompat:1.2.0'
-  implementation 'com.google.android.material:material:1.2.1'
-  implementation 'androidx.fragment:fragment:1.2.5'
-  implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+  implementation 'androidx.appcompat:appcompat:1.4.2'
+  implementation 'com.google.android.material:material:1.6.1'
+  implementation 'androidx.fragment:fragment:1.5.1'
+  implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
   implementation 'androidx.multidex:multidex:2.0.1'
   implementation 'androidx.cardview:cardview:1.0.0'
-  implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
+  implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
   implementation 'de.hdodenhof:circleimageview:3.1.0'
 
 
@@ -467,23 +497,11 @@ android.applicationVariants.all { variant ->
   }
 }
 
-
-// Ensure the no-op dependency is always used in JVM tests.
-configurations.all { config ->
-  if (config.name.contains('UnitTest')) {
-    config.resolutionStrategy.eachDependency { details ->
-      if (details.requested.group == 'com.squareup.leakcanary' && details.requested.name == 'leakcanary-android') {
-        details.useTarget(group: details.requested.group, name: 'leakcanary-android-no-op', version: details.requested.version)
-      }
-    }
-  }
-}
-
 subprojects {
   afterEvaluate {project ->
     if (project.hasProperty("android")) {
       android {
-        compileSdkVersion 30
+        compileSdkVersion 31
       }
     }
   }

@@ -16,6 +16,18 @@
  */
 package se.leap.bitmaskclient.eip;
 
+import static android.os.Build.VERSION_CODES.O;
+import static android.text.TextUtils.isEmpty;
+import static androidx.core.app.NotificationCompat.PRIORITY_DEFAULT;
+import static androidx.core.app.NotificationCompat.PRIORITY_MAX;
+import static de.blinkt.openvpn.core.ConnectionStatus.LEVEL_NONETWORK;
+import static de.blinkt.openvpn.core.ConnectionStatus.LEVEL_WAITING_FOR_USER_INPUT;
+import static se.leap.bitmaskclient.base.MainActivity.ACTION_SHOW_VPN_FRAGMENT;
+import static se.leap.bitmaskclient.base.models.Constants.ASK_TO_CANCEL_VPN;
+import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_START;
+import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_STOP_BLOCKING_VPN;
+import static se.leap.bitmaskclient.base.utils.ConfigHelper.getPendingIntentFlags;
+
 import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -31,7 +43,6 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.TextUtils;
 import android.text.style.StyleSpan;
-import android.widget.RemoteViews;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
@@ -44,17 +55,6 @@ import de.blinkt.openvpn.core.VpnStatus;
 import se.leap.bitmaskclient.R;
 import se.leap.bitmaskclient.base.MainActivity;
 import se.leap.bitmaskclient.base.StartActivity;
-
-import static android.os.Build.VERSION_CODES.O;
-import static android.text.TextUtils.isEmpty;
-import static androidx.core.app.NotificationCompat.PRIORITY_DEFAULT;
-import static androidx.core.app.NotificationCompat.PRIORITY_MAX;
-import static de.blinkt.openvpn.core.ConnectionStatus.LEVEL_NONETWORK;
-import static de.blinkt.openvpn.core.ConnectionStatus.LEVEL_WAITING_FOR_USER_INPUT;
-import static se.leap.bitmaskclient.base.MainActivity.ACTION_SHOW_VPN_FRAGMENT;
-import static se.leap.bitmaskclient.base.models.Constants.ASK_TO_CANCEL_VPN;
-import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_START;
-import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_STOP_BLOCKING_VPN;
 
 /**
  * Created by cyberta on 14.01.18.
@@ -128,7 +128,7 @@ public class VpnNotificationManager {
 
     public void buildOpenVpnNotification(String profileName, boolean isObfuscated, String msg,
                                          String tickerText, ConnectionStatus status, long when,
-                                         String notificationChannelNewstatusId, VpnServiceCallback vpnServiceCallback) {
+                                         String channelId, VpnServiceCallback vpnServiceCallback) {
         String cancelString;
         CharSequence bigmessage = null;
         String bridgeIcon = new String(Character.toChars(0x1f309));
@@ -140,7 +140,7 @@ public class VpnNotificationManager {
             case LEVEL_CONNECTING_SERVER_REPLIED:
             case LEVEL_CONNECTING_NO_SERVER_REPLY_YET:
                 cancelString = context.getString(R.string.cancel);
-                if (isObfuscated && Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
+                if (isObfuscated) {
                     Spannable spannable = new SpannableString(context.getString(R.string.obfuscated_connection_try));
                     spannable.setSpan(new StyleSpan(Typeface.ITALIC), 0, spannable.length() -1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                     bigmessage = TextUtils.concat(spannable, " " + bridgeIcon + "\n" + msg);
@@ -149,7 +149,7 @@ public class VpnNotificationManager {
 
             // show disconnect if connection exists
             case LEVEL_CONNECTED:
-                if (isObfuscated && Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
+                if (isObfuscated) {
                     Spannable spannable = new SpannableString(context.getString(R.string.obfuscated_connection));
                     spannable.setSpan(new StyleSpan(Typeface.ITALIC), 0, spannable.length() -1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                     bigmessage = TextUtils.concat(spannable, " " + bridgeIcon + "\n" + msg);
@@ -183,7 +183,7 @@ public class VpnNotificationManager {
                 bigmessage,
                 tickerText,
                 status,
-                notificationChannelNewstatusId,
+                channelId,
                 PRIORITY_DEFAULT,
                 when,
                 contentIntent,
@@ -196,7 +196,8 @@ public class VpnNotificationManager {
     }
 
     public void cancelAll() {
-        compatNotificationManager.cancelAll();
+        compatNotificationManager.cancel(OpenVPNService.NOTIFICATION_CHANNEL_NEWSTATUS_ID.hashCode());
+        compatNotificationManager.cancel(VoidVpnService.NOTIFICATION_CHANNEL_NEWSTATUS_ID.hashCode());
     }
 
 
@@ -243,40 +244,16 @@ public class VpnNotificationManager {
         }
     }
 
-    /**
-     * @return a custom remote view for notifications for API 16 - 19
-     */
-    private RemoteViews getKitkatCustomRemoteView(ConnectionStatus status, String title, String message) {
-        int iconResource = getIconByConnectionStatus(status);
-        RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.v_custom_notification);
-        remoteViews.setImageViewResource(R.id.image_icon, iconResource);
-        remoteViews.setTextViewText(R.id.message, message);
-        remoteViews.setTextViewText(R.id.title, title);
-
-        return remoteViews;
-    }
-
     private void buildVpnNotification(String title, String message, CharSequence bigMessage, String tickerText,
-                                      ConnectionStatus status, String notificationChannelNewstatusId, int priority,
+                                      ConnectionStatus status, String channelId, int priority,
                                       long when, PendingIntent contentIntent, NotificationCompat.Action notificationAction, VpnServiceCallback vpnServiceCallback) {
-        NotificationCompat.Builder nCompatBuilder = new NotificationCompat.Builder(context, notificationChannelNewstatusId);
+        NotificationCompat.Builder nCompatBuilder = new NotificationCompat.Builder(context, channelId);
         int icon = getIconByConnectionStatus(status);
 
-        // this is a workaround to avoid confusion between the Android's system vpn notification
-        // showing a filled out key icon and the bitmask icon indicating a different state.
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.KITKAT &&
-                notificationChannelNewstatusId.equals(OpenVPNService.NOTIFICATION_CHANNEL_NEWSTATUS_ID)) {
-            if (status != LEVEL_NONETWORK) {
-                // removes the icon from the system status bar
-                icon = android.R.color.transparent;
-                // adds the icon to the notification in the notification drawer
-                nCompatBuilder.setContent(getKitkatCustomRemoteView(status, title, message));
-            }
-        } else {
-            nCompatBuilder.setStyle(new NotificationCompat.BigTextStyle().
-                    setBigContentTitle(title).
-                    bigText(bigMessage));
-        }
+        nCompatBuilder.setStyle(new NotificationCompat.BigTextStyle().
+                setBigContentTitle(title).
+                bigText(bigMessage));
+
         nCompatBuilder.addAction(notificationAction);
         nCompatBuilder.setContentTitle(title);
         nCompatBuilder.setCategory(NotificationCompat.CATEGORY_SERVICE);
@@ -294,29 +271,31 @@ public class VpnNotificationManager {
         }
 
         Notification notification = nCompatBuilder.build();
-        int notificationId = notificationChannelNewstatusId.hashCode();
+        int notificationId = channelId.hashCode();
 
-        compatNotificationManager.notify(notificationId, notification);
         if (vpnServiceCallback != null) {
             vpnServiceCallback.onNotificationBuild(notificationId, notification);
+        } else {
+            compatNotificationManager.notify(notificationId, notification);
+
         }
     }
 
     private PendingIntent getMainActivityIntent() {
         Intent startActivity = new Intent(context, StartActivity.class);
-        return PendingIntent.getActivity(context, 0, startActivity, PendingIntent.FLAG_CANCEL_CURRENT);
+        return PendingIntent.getActivity(context, 0, startActivity, getPendingIntentFlags());
     }
 
     private PendingIntent getStartOpenvpnIntent() {
         Intent startIntent = new Intent(context, EIP.class);
         startIntent.setAction(EIP_ACTION_START);
-        return PendingIntent.getService(context, 0, startIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+        return PendingIntent.getService(context, 0, startIntent, getPendingIntentFlags());
     }
 
     private PendingIntent getStopVoidVpnIntent() {
         Intent stopVoidVpnIntent = new Intent (context, VoidVpnService.class);
         stopVoidVpnIntent.setAction(EIP_ACTION_STOP_BLOCKING_VPN);
-        return PendingIntent.getService(context, 0, stopVoidVpnIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+        return PendingIntent.getService(context, 0, stopVoidVpnIntent, getPendingIntentFlags());
     }
 
     private PendingIntent getDisconnectIntent() {
@@ -324,7 +303,7 @@ public class VpnNotificationManager {
         disconnectVPN.setAction(ACTION_SHOW_VPN_FRAGMENT);
         disconnectVPN.putExtra(ASK_TO_CANCEL_VPN, true);
         disconnectVPN.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        return PendingIntent.getActivity(context, 0, disconnectVPN, PendingIntent.FLAG_CANCEL_CURRENT);
+        return PendingIntent.getActivity(context, 0, disconnectVPN, getPendingIntentFlags());
     }
 
     private PendingIntent getUserInputIntent(String needed) {
@@ -333,7 +312,7 @@ public class VpnNotificationManager {
         intent.putExtra("need", needed);
         Bundle b = new Bundle();
         b.putString("need", needed);
-        PendingIntent pIntent = PendingIntent.getActivity(context, 12, intent, 0);
+        PendingIntent pIntent = PendingIntent.getActivity(context, 12, intent, getPendingIntentFlags());
         return pIntent;
     }
 

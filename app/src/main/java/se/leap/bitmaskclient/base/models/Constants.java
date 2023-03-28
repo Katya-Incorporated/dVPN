@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 LEAP Encryption Access Project and contributers
+ * Copyright (c) 2021 LEAP Encryption Access Project and contributers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,9 +43,17 @@ public interface Constants {
     String PREFERRED_CITY = "preferred_city";
     String USE_SNOWFLAKE = "use_snowflake";
     String PREFER_UDP = "prefer_UDP";
+    String GATEWAY_PINNING = "gateway_pinning";
+    String ALLOW_EXPERIMENTAL_TRANSPORTS = "allow_experimental_transports";
+    String USE_OBFUSCATION_PINNING = "use_obfuscation_pinning";
+    String OBFUSCATION_PINNING_IP = "obfuscation_pinning_ip";
+    String OBFUSCATION_PINNING_PORT = "obfuscation_pinning_port";
+    String OBFUSCATION_PINNING_CERT = "obfuscation_pinning_cert";
+    String OBFUSCATION_PINNING_KCP = "obfuscation_pinning_udp";
+    String OBFUSCATION_PINNING_LOCATION = "obfuscation_pinning_location";
 
 
-     //////////////////////////////////////////////
+    //////////////////////////////////////////////
     // REQUEST CODE CONSTANTS
     /////////////////////////////////////////////
 
@@ -69,6 +77,7 @@ public interface Constants {
 
 
     String ASK_TO_CANCEL_VPN = "ask_to_cancel_vpn";
+    String EXTRA_MOTD_MSG = "extra_motd_message";
 
 
     //////////////////////////////////////////////
@@ -106,6 +115,10 @@ public interface Constants {
     String PROVIDER_EIP_DEFINITION = "Constants.EIP_DEFINITION";
     String PROVIDER_PROFILE_UUID = "Constants.PROVIDER_PROFILE_UUID";
     String PROVIDER_PROFILE = "Constants.PROVIDER_PROFILE";
+    String PROVIDER_MOTD = "Constants.PROVIDER_MOTD";
+    String PROVIDER_MOTD_HASHES = "Constants.PROVIDER_MOTD_HASHES";
+    String PROVIDER_MOTD_LAST_SEEN = "Constants.PROVIDER_MOTD_LAST_SEEN";
+    String PROVIDER_MOTD_LAST_UPDATED = "Constants.PROVIDER_MOTD_LAST_UPDATED";
 
     ////////////////////////////////////////////////
     // PRESHIPPED PROVIDER CONFIG
@@ -162,6 +175,7 @@ public interface Constants {
     String IP_ADDRESS = "ip_address";
     String IP_ADDRESS6 = "ip_address6";
     String REMOTE = "remote";
+    String SOCKS_PROXY = "socks-proxy";
     String PORTS = "ports";
     String PROTOCOLS = "protocols";
     String UDP = "udp";

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--<item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/white"/>
+            <size android:width="250dp" android:height="250dp"/>
+        </shape>
+    </item>-->
+   <item
+        android:bottom="15dp"
+       android:top="15dp"
+        >
+        <shape android:shape="oval">
+           <solid android:color="@color/btn_stop"/>
+            <size android:width="250dp" android:height="250dp" />
+        </shape>
+    </item>
+    <item
+        android:bottom="15dp"
+        android:top="15dp"
+        >
+        <shape
+            android:shape="ring"
+            android:innerRadius="122dp"
+            android:useLevel="false"
+            android:thickness="15dp">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="125dp"
+                android:centerX="0.51"
+                android:centerY="0.55"
+                android:startColor="#000000"
+                android:centerColor="#000000"
+                android:endColor="@color/transparent" />
+
+        </shape>
+    </item>
+    <item
+        android:top="85dp"
+        android:bottom="85dp"
+        android:left="70dp"
+        android:right="70dp"
+        android:drawable="@drawable/ic_btn_cancel"
+        />
+</layer-list>

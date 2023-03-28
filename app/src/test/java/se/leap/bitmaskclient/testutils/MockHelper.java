@@ -1,5 +1,29 @@
 package se.leap.bitmaskclient.testutils;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MOTD;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MOTD_HASHES;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MOTD_LAST_SEEN;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MOTD_LAST_UPDATED;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_PRIVATE_KEY;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.base.utils.FileHelper.createFile;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getEipDefinitionFromPreferences;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getFromPersistedProvider;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getLongFromPersistedProvider;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getStringSetFromPersistedProvider;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -23,11 +47,15 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigInteger;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPrivateKey;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -50,24 +78,6 @@ import se.leap.bitmaskclient.providersetup.connectivity.OkHttpClientGenerator;
 import se.leap.bitmaskclient.testutils.BackendMockResponses.BackendMockProvider;
 import se.leap.bitmaskclient.testutils.matchers.BundleMatcher;
 import se.leap.bitmaskclient.tor.TorStatusObservable;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_PRIVATE_KEY;
-import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.base.utils.FileHelper.createFile;
-import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getEipDefinitionFromPreferences;
-import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getFromPersistedProvider;
 
 /**
  * Created by cyberta on 29.01.18.
@@ -408,6 +418,10 @@ public class MockHelper {
         when(createFile(any(File.class), anyString())).thenReturn(mockedFile);
     }
 
+    public static void mockBase64() {
+        mockStatic(android.util.Base64.class);
+        when(android.util.Base64.encodeToString(any(), anyInt())).thenAnswer(invocation -> Arrays.toString(Base64.getEncoder().encode((byte[]) invocation.getArguments()[0])));
+    }
     public static void mockConfigHelper(String mockedFingerprint) throws CertificateEncodingException, NoSuchAlgorithmException {
         mockStatic(ConfigHelper.class);
         when(ConfigHelper.getFingerprintFromCertificate(any(X509Certificate.class), anyString())).thenReturn(mockedFingerprint);
@@ -417,6 +431,33 @@ public class MockHelper {
         when(ConfigHelper.timezoneDistance(anyInt(), anyInt())).thenCallRealMethod();
         when(ConfigHelper.isIPv4(anyString())).thenCallRealMethod();
         when(ConfigHelper.isDefaultBitmask()).thenReturn(true);
+        when(ConfigHelper.getDomainFromMainURL(anyString())).thenCallRealMethod();
+        when(ConfigHelper.parseRsaKeyFromString(anyString())).thenReturn(new RSAPrivateKey() {
+            @Override
+            public BigInteger getPrivateExponent() {
+                return BigInteger.TEN;
+            }
+
+            @Override
+            public String getAlgorithm() {
+                return "RSA";
+            }
+
+            @Override
+            public String getFormat() {
+                return null;
+            }
+
+            @Override
+            public byte[] getEncoded() {
+                return new byte[0];
+            }
+
+            @Override
+            public BigInteger getModulus() {
+                return BigInteger.ONE;
+            }
+        });
     }
 
     public static void mockPreferenceHelper(final Provider providerFromPrefs) {
@@ -439,7 +480,35 @@ public class MockHelper {
                         return providerFromPrefs.getCaCert();
                     case Provider.GEOIP_URL:
                         return providerFromPrefs.getGeoipUrl().toString();
+                    case Provider.MOTD_URL:
+                        return providerFromPrefs.getMotdUrl().toString();
+                    case PROVIDER_MOTD:
+                        return providerFromPrefs.getMotdJsonString();
 
+                }
+                return null;
+            }
+        });
+        when(getLongFromPersistedProvider(anyString(), anyString(), any(SharedPreferences.class))).thenAnswer(new Answer<Long>() {
+            @Override
+            public Long answer(InvocationOnMock invocation) throws Throwable {
+                String key = (String) invocation.getArguments()[0];
+                switch (key) {
+                    case PROVIDER_MOTD_LAST_SEEN:
+                        return providerFromPrefs.getLastMotdSeen();
+                    case PROVIDER_MOTD_LAST_UPDATED:
+                        return providerFromPrefs.getLastMotdUpdate();
+                }
+                return 0L;
+            }
+        });
+        when(getStringSetFromPersistedProvider(anyString(), anyString(), any(SharedPreferences.class))).thenAnswer(new Answer<Set<String>>() {
+            @Override
+            public Set<String> answer(InvocationOnMock invocation) throws Throwable {
+                String key = (String) invocation.getArguments()[0];
+                switch (key) {
+                    case PROVIDER_MOTD_HASHES:
+                        return providerFromPrefs.getMotdLastSeenHashes();
                 }
                 return null;
             }
@@ -481,9 +550,9 @@ public class MockHelper {
         });
         when(TorStatusObservable.getSnowflakeStatus()).thenAnswer((Answer<TorStatusObservable.SnowflakeStatus>) invocation -> {
             if (waitUntilSuccess.get()) {
-                return TorStatusObservable.SnowflakeStatus.ON;
+                return TorStatusObservable.SnowflakeStatus.STARTED;
             }
-            return TorStatusObservable.SnowflakeStatus.OFF;
+            return TorStatusObservable.SnowflakeStatus.STOPPED;
         });
 
         if (exception != null) {

@@ -8,14 +8,15 @@ function quit {
 SCRIPT_DIR=$(dirname "$0")
 BASE_DIR="$SCRIPT_DIR/.."
 DIR_OVPNASSETS=./ics-openvpn/main/build/ovpnassets
-DIR_OVPNLIBS=./ics-openvpn/main/build/intermediates/cmake/noovpn3/release/obj
+DIR_OVPNLIBS=./ics-openvpn/main/build/intermediates/cmake/skeletonRelease/obj
 DIR_GOLIBS=./bitmaskcore/lib/
 #FILE_X86=./go/out/x86/piedispatcherlib
 #FILE_ARM=./go/out/armeabi-v7a/piedispatcherlib
 DIR_TORLIBS=./tor-android/external/lib
 EXPECTED_NDK_VERSION="21.4.7075529"
 EXPECTED_ANDROID_NDK_RELEASE_VERSION="r21e"
-BUILD_TOR=true
+if [[ -z $BUILD_TOR ]]; then BUILD_TOR=true; fi
+if [[ -z $BUILD_OPENVPN_LIBS ]]; then BUILD_OPENVPN_LIBS=true; fi
 
 # init
 # look for empty dir
@@ -26,6 +27,9 @@ cd $BASE_DIR
 if [[ $(ls -A ${ANDROID_HOME}/ndk/${EXPECTED_NDK_VERSION}) ]]
 then
   ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/${EXPECTED_NDK_VERSION}
+elif [[ -f ${ANDROID_HOME/android-ndk-}${EXPECTED_ANDOID_NDK_RELEASE_VERSION }} ]]; then
+  echo "make sure you have the right ndk version installed and paths are set correctly"
+  exit 1
 else
   # ndk was manually downloaded from http://dl.google.com/android/repository
   ANDROID_NDK_HOME=${ANDROID_HOME}/android-ndk-${EXPECTED_ANDROID_NDK_RELEASE_VERSION}
@@ -60,8 +64,9 @@ else
 fi
 
 # build openvpn libs
-if [[ $(ls -A ${DIR_OVPNASSETS}) && $(ls -A ${DIR_OVPNLIBS}) ]]
-then
+if [[ ${BUILD_OPENVPN_LIBS} == false ]]; then
+  echo "skipping openvpn"
+elif [[ $(ls -A ${DIR_OVPNASSETS}) && $(ls -A ${DIR_OVPNLIBS}) ]]; then
     echo "Dirty build: skipped externalNativeBuild - reusing existing libs"
 else
     echo "Clean build: starting externalNativeBuild"

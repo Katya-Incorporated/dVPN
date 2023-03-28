@@ -60,12 +60,19 @@ public class ProviderAPI extends JobIntentService implements ProviderApiManagerB
             SET_UP_PROVIDER = "setUpProvider",
             UPDATE_PROVIDER_DETAILS = "updateProviderDetails",
             DOWNLOAD_GEOIP_JSON = "downloadGeoIpJson",
+            DOWNLOAD_MOTD = "downloadMotd",
             SIGN_UP = "srpRegister",
             LOG_IN = "srpAuth",
             LOG_OUT = "logOut",
+            // all vpn certificate download commands are used in different scenarios with different error handling
+            // command key used for the initial vpn certificate download during the provider setup
             DOWNLOAD_VPN_CERTIFICATE = "downloadUserAuthedVPNCertificate",
+            // command key used to update soon expiring but yet valid certificates after connecting to the vpn
+            QUIETLY_UPDATE_VPN_CERTIFICATE = "ProviderAPI.QUIETLY_UPDATE_VPN_CERTIFICATE",
+            // command key used to update invalid certificates, connecting to the vpn is impossible
             UPDATE_INVALID_VPN_CERTIFICATE = "ProviderAPI.UPDATE_INVALID_VPN_CERTIFICATE",
             PARAMETERS = "parameters",
+            DELAY = "delay",
             RECEIVER_KEY = "receiver",
             ERRORS = "errors",
             ERRORID = "errorId",
@@ -93,10 +100,10 @@ public class ProviderAPI extends JobIntentService implements ProviderApiManagerB
             CORRECTLY_DOWNLOADED_GEOIP_JSON = 17,
             INCORRECTLY_DOWNLOADED_GEOIP_JSON = 18,
             TOR_TIMEOUT = 19,
-            MISSING_NETWORK_CONNECTION = 20;
+            MISSING_NETWORK_CONNECTION = 20,
+            TOR_EXCEPTION = 21;
 
     ProviderApiManager providerApiManager;
-    private volatile TorServiceConnection torServiceConnection;
 
     //TODO: refactor me, please!
     //used in insecure flavor only
@@ -155,7 +162,7 @@ public class ProviderAPI extends JobIntentService implements ProviderApiManagerB
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
                 NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
                 return activeNetwork != null &&
-                        activeNetwork.isConnectedOrConnecting();
+                        activeNetwork.isConnected();
             } else {
                 NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
                 if (capabilities != null) {

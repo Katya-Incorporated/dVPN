@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 LEAP Encryption Access Project and contributers
+ * Copyright (c) 2021 LEAP Encryption Access Project and contributers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,20 @@
 package se.leap.bitmaskclient.base.fragments;
 
 
+import static android.content.Context.MODE_PRIVATE;
+import static android.view.View.GONE;
+import static android.view.View.VISIBLE;
+import static se.leap.bitmaskclient.base.models.Constants.DONATION_URL;
+import static se.leap.bitmaskclient.base.models.Constants.ENABLE_DONATION;
+import static se.leap.bitmaskclient.base.models.Constants.PREFERRED_CITY;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
+import static se.leap.bitmaskclient.base.models.Constants.REQUEST_CODE_SWITCH_PROVIDER;
+import static se.leap.bitmaskclient.base.models.Constants.SHARED_PREFERENCES;
+import static se.leap.bitmaskclient.base.utils.ConfigHelper.isDefaultBitmask;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getPreferredCity;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getSaveBattery;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.saveBattery;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -32,8 +46,6 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.StringRes;
-import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -56,21 +68,6 @@ import se.leap.bitmaskclient.base.views.IconTextEntry;
 import se.leap.bitmaskclient.eip.EipStatus;
 import se.leap.bitmaskclient.providersetup.ProviderListActivity;
 import se.leap.bitmaskclient.tethering.TetheringObservable;
-
-import static android.content.Context.MODE_PRIVATE;
-import static android.view.View.GONE;
-import static android.view.View.VISIBLE;
-import static se.leap.bitmaskclient.base.BitmaskApp.getRefWatcher;
-import static se.leap.bitmaskclient.base.models.Constants.DONATION_URL;
-import static se.leap.bitmaskclient.base.models.Constants.ENABLE_DONATION;
-import static se.leap.bitmaskclient.base.models.Constants.PREFERRED_CITY;
-import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
-import static se.leap.bitmaskclient.base.models.Constants.REQUEST_CODE_SWITCH_PROVIDER;
-import static se.leap.bitmaskclient.base.models.Constants.SHARED_PREFERENCES;
-import static se.leap.bitmaskclient.base.utils.ConfigHelper.isDefaultBitmask;
-import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getPreferredCity;
-import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getSaveBattery;
-import static se.leap.bitmaskclient.base.utils.PreferenceHelper.saveBattery;
 
 /**
  * Fragment used for managing interactions for and presentation of a navigation drawer.
@@ -174,7 +171,6 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
         this.drawerLayout.setDrawerShadow(R.drawable.drawer_shadow, GravityCompat.START);
         toolbar = this.drawerLayout.findViewById(R.id.toolbar);
 
-        setupActionBar();
         setupEntries();
         setupActionBarDrawerToggle(activity);
 
@@ -235,7 +231,6 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
             Bundle arguments = new Bundle();
             arguments.putParcelable(PROVIDER_KEY, currentProvider);
             fragment.setArguments(arguments);
-            hideActionBarSubTitle();
             fragmentManager.replace(R.id.main_container, fragment, MainActivity.TAG);
             closeDrawer();
         });
@@ -302,6 +297,10 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
         manualGatewaySelection.setOnClickListener(v -> {
             FragmentManagerEnhanced fragmentManager = new FragmentManagerEnhanced(getActivity().getSupportFragmentManager());
             closeDrawer();
+            Fragment current = fragmentManager.findFragmentByTag(MainActivity.TAG);
+            if (current instanceof GatewaySelectionFragment) {
+                return;
+            }
             Fragment fragment = new GatewaySelectionFragment();
             fragmentManager.replace(R.id.main_container, fragment, MainActivity.TAG);
         });
@@ -346,15 +345,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
         }
     }
 
-    private ActionBar setupActionBar() {
-        AppCompatActivity activity = (AppCompatActivity) getActivity();
-        activity.setSupportActionBar(toolbar);
-        final ActionBar actionBar = activity.getSupportActionBar();
-        actionBar.setDisplayHomeAsUpEnabled(true);
-        actionBar.setHomeButtonEnabled(true);
-        actionBar.setDisplayShowTitleEnabled(true);
-        return actionBar;
-    }
+
 
     @NonNull
     private void closeDrawerWithDelay() {
@@ -416,14 +407,6 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
     }
 
     @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        if (drawerLayout != null && isDrawerOpen()) {
-            showGlobalContextActionBar();
-        }
-        super.onCreateOptionsMenu(menu, inflater);
-    }
-
-    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (drawerToggle.onOptionsItemSelected(item)) {
             return true;
@@ -434,29 +417,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
     @Override
     public void onDestroy() {
         super.onDestroy();
-        getRefWatcher(getActivity()).watch(this);
         preferences.unregisterOnSharedPreferenceChangeListener(this);
-    }
-
-    /**
-     * Per the navigation drawer design guidelines, updates the action bar to show the global app
-     * 'context', rather than just what's in the current screen.
-     */
-    private void showGlobalContextActionBar() {
-        ActionBar actionBar = getActionBar();
-        actionBar.setDisplayShowTitleEnabled(true);
-        actionBar.setTitle(R.string.app_name);
-    }
-
-    private ActionBar getActionBar() {
-        return ((AppCompatActivity) getActivity()).getSupportActionBar();
-    }
-
-    private void hideActionBarSubTitle() {
-        ActionBar actionBar = getActionBar();
-        if (actionBar != null) {
-            actionBar.setSubtitle(null);
-        }
     }
 
     public void refresh() {

@@ -3,7 +3,7 @@
   <string name="retry">Wiederholen</string>
   <string name="repository_url_text">Quelltext verfügbar unter: https://0xacab.org/leap/bitmask_android</string>
   <string name="leap_tracker">Fehlerticketsystem zugänglich unter https://0xacab.org/leap/bitmask_android/issues</string>
-  <string name="translation_project_text">Übersetzungen sind sehr willkommen. Schau dir unser Transifex Projekt unter https://www.transifex.com/projects/p/bitmask-android an.</string>
+  <string name="translation_project_text">Übersetzungen sind sehr willkommen. Schau dir unser Transifex Projekt unter https://www.transifex.com/projects/p/bitmask an.</string>
   <string name="switch_provider_menu_option">Provider wechseln</string>
   <string name="info">Info</string>
   <string name="show_connection_details">Zeige Verbindungsdetails</string>
@@ -67,6 +67,9 @@
   <string name="authentication_failed_message">Authentifizierung fehlgeschlagen</string>
   <string name="registration_failed_message">Registrierung fehlgeschlagen</string>
   <string name="eip_status_start_pending">Initiiere Verbindung</string>
+  <string name="eip_status_connecting">Verbinde VPN</string>
+  <string name="eip_status_unsecured">Ungesicherte Verbindung</string>
+  <string name="eip_status_secured">Sichere Verbindung</string>
   <string name="eip_cancel_connect_title">Verbindung abbrechen?</string>
   <string name="eip_cancel_connect_text">Es existiert ein Verbindungsversuch. Möchten Sie diesen abbrechen?</string>
   <string name="eip.warning.browser_inconsistency">Vpn Verbindung deaktivieren? Wenn das VPN aus ist, können persönliche Daten gegenüber deinem Internet Provider oder im lokalen Netzwerk ungeschützt sein.</string>
@@ -79,7 +82,7 @@
   <string name="signing_up">Am Registrieren</string>
   <string name="vpn.button.turn.on">Einschalten</string>
   <string name="vpn.button.turn.off">Ausschalten</string>
-  <string name="vpn_button_turn_off_blocking">Blocken beenden.</string>
+  <string name="vpn_button_turn_off_blocking">Blocken beenden</string>
   <string name="vpn_securely_routed">Dein Internetverkehr wird sicher durchgeleitet durch:</string>
   <string name="vpn_securely_routed_no_internet">Keine Internetverbindung vorhanden. Sobald du wieder online bist verbindest du dich automatisch mit:</string>
   <string name="log_fragment_title">Log</string>
@@ -139,7 +142,7 @@
   <string name="warning_no_more_gateways_use_pt">%s konnte sich nicht verbinden. Es kann sein, dass VPN Verkehr geblockt wird. Möchtest du versuchen, eine verschleierte Verbindung herzustellen?</string>
   <string name="warning_no_more_gateways_no_pt">%s konnte sich nicht verbinden. Möchtest du es noch einmal versuchen?</string>
   <string name="warning_no_more_gateways_use_ovpn">%s konnte keine verschleierte Verbindung herstellen. Möchtest du versuchen, eine normale VPN Verbindung herzustellen?</string>
-  <string name="warning_no_more_gateways_manual_gw_selection">%1$skonnte sich nicht mit %2$s verbinden. Möchtest du versuchen, dich automatisch mit dem besten Standort zu verbinden?</string>
+  <string name="warning_no_more_gateways_manual_gw_selection">%1$s konnte sich nicht mit %2$s verbinden. Möchtest du versuchen, dich automatisch mit dem besten Standort zu verbinden?</string>
   <string name="warning_option_try_best">Versuche besten Standort</string>
   <string name="warning_option_try_pt">Teste verschleierte Verbindung</string>
   <string name="warning_option_try_ovpn">Teste normale Verbindung</string>
@@ -201,4 +204,6 @@
   <string name="disabled_while_udp_on">Deaktiviert während UDP eingeschaltet ist</string>
   <string name="advanced_settings">Erweiterte Einstellungen</string>
   <string name="cancel_connection">Trennen</string>
+  <string name="unknown_location">Unbekannter Standort</string>
+  <string name="splash_footer">Entwickelt von: LEAP</string>
 </resources>

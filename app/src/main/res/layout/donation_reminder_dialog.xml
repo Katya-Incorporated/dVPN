@@ -3,7 +3,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:scrollbars="none">
+    xmlns:tools="http://schemas.android.com/tools"
+    android:scrollbars="none"
+    tools:viewBindingIgnore="true">
 
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
@@ -28,7 +30,7 @@
             android:id="@+id/tvMessage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="@dimen/standard_margin"
+            android:layout_margin="@dimen/donation_reminder_padding"
             android:gravity="center"
             android:text="@string/donate_message_calyx" />
 
@@ -48,20 +50,20 @@
             android:layout_marginTop="@dimen/add_button_margin"
             android:background="@drawable/cust_button_primary"
             android:text="@string/donate_button_donate"
-            android:textColor="@color/white"
+            android:textColor="@color/color_font_btn_primary"
             android:textStyle="bold" />
 
         <Button
             android:id="@+id/btnLater"
             android:layout_width="200dp"
             android:layout_height="38dp"
-            android:layout_marginBottom="@dimen/mainbutton_padding"
+            android:layout_marginBottom="20dp"
             android:layout_marginLeft="@dimen/add_button_margin"
             android:layout_marginRight="@dimen/add_button_margin"
             android:layout_marginTop="@dimen/standard_margin"
             android:background="@drawable/cust_button_secondary"
             android:text="@string/donate_button_remind_later"
-            android:textColor="@android:color/tab_indicator_text"
+            android:textColor="@color/color_font_btn_secondary"
             android:textStyle="bold" />
 
     </LinearLayout>

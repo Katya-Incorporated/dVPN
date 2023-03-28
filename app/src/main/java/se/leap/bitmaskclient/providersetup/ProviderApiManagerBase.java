@@ -17,6 +17,90 @@
 
 package se.leap.bitmaskclient.providersetup;
 
+import static se.leap.bitmaskclient.R.string.certificate_error;
+import static se.leap.bitmaskclient.R.string.error_io_exception_user_message;
+import static se.leap.bitmaskclient.R.string.error_json_exception_user_message;
+import static se.leap.bitmaskclient.R.string.error_no_such_algorithm_exception_user_message;
+import static se.leap.bitmaskclient.R.string.malformed_url;
+import static se.leap.bitmaskclient.R.string.server_unreachable_message;
+import static se.leap.bitmaskclient.R.string.service_is_down_error;
+import static se.leap.bitmaskclient.R.string.vpn_certificate_is_invalid;
+import static se.leap.bitmaskclient.R.string.warning_corrupted_provider_cert;
+import static se.leap.bitmaskclient.R.string.warning_corrupted_provider_details;
+import static se.leap.bitmaskclient.R.string.warning_expired_provider_cert;
+import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_PROVIDER_API_EVENT;
+import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_CODE;
+import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_KEY;
+import static se.leap.bitmaskclient.base.models.Constants.CREDENTIALS_PASSWORD;
+import static se.leap.bitmaskclient.base.models.Constants.CREDENTIALS_USERNAME;
+import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_START;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MOTD;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MOTD_HASHES;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MOTD_LAST_SEEN;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MOTD_LAST_UPDATED;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_PRIVATE_KEY;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.base.models.Provider.CA_CERT;
+import static se.leap.bitmaskclient.base.models.Provider.GEOIP_URL;
+import static se.leap.bitmaskclient.base.models.Provider.MOTD_URL;
+import static se.leap.bitmaskclient.base.models.Provider.PROVIDER_API_IP;
+import static se.leap.bitmaskclient.base.models.Provider.PROVIDER_IP;
+import static se.leap.bitmaskclient.base.utils.ConfigHelper.getDomainFromMainURL;
+import static se.leap.bitmaskclient.base.utils.ConfigHelper.getFingerprintFromCertificate;
+import static se.leap.bitmaskclient.base.utils.ConfigHelper.getProviderFormattedString;
+import static se.leap.bitmaskclient.base.utils.ConfigHelper.parseRsaKeyFromString;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.deleteProviderDetailsFromPreferences;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getFromPersistedProvider;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getLongFromPersistedProvider;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getStringSetFromPersistedProvider;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.BACKEND_ERROR_KEY;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.BACKEND_ERROR_MESSAGE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_DOWNLOADED_EIP_SERVICE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_DOWNLOADED_GEOIP_JSON;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_DOWNLOADED_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.DELAY;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.DOWNLOAD_GEOIP_JSON;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.DOWNLOAD_MOTD;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.DOWNLOAD_SERVICE_JSON;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.DOWNLOAD_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.ERRORID;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.ERRORS;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.FAILED_LOGIN;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.FAILED_SIGNUP;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_EIP_SERVICE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_GEOIP_JSON;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.INITIAL_ACTION;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.LOGOUT_FAILED;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.LOG_IN;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.LOG_OUT;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.MISSING_NETWORK_CONNECTION;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.PARAMETERS;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.PROVIDER_NOK;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.PROVIDER_OK;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.QUIETLY_UPDATE_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.RECEIVER_KEY;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.SET_UP_PROVIDER;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.SIGN_UP;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.SUCCESSFUL_LOGIN;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.SUCCESSFUL_LOGOUT;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.SUCCESSFUL_SIGNUP;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.TOR_EXCEPTION;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.TOR_TIMEOUT;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.UPDATE_INVALID_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.UPDATE_PROVIDER_DETAILS;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.USER_MESSAGE;
+import static se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog.DOWNLOAD_ERRORS.ERROR_CERTIFICATE_PINNING;
+import static se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog.DOWNLOAD_ERRORS.ERROR_CORRUPTED_PROVIDER_JSON;
+import static se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog.DOWNLOAD_ERRORS.ERROR_INVALID_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog.DOWNLOAD_ERRORS.ERROR_TOR_TIMEOUT;
+import static se.leap.bitmaskclient.tor.TorStatusObservable.TorStatus.OFF;
+import static se.leap.bitmaskclient.tor.TorStatusObservable.TorStatus.ON;
+import static se.leap.bitmaskclient.tor.TorStatusObservable.getProxyPort;
+
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
@@ -48,6 +132,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -62,83 +147,12 @@ import se.leap.bitmaskclient.base.models.ProviderObservable;
 import se.leap.bitmaskclient.base.utils.ConfigHelper;
 import se.leap.bitmaskclient.base.utils.PreferenceHelper;
 import se.leap.bitmaskclient.eip.EipStatus;
+import se.leap.bitmaskclient.motd.MotdClient;
 import se.leap.bitmaskclient.providersetup.connectivity.OkHttpClientGenerator;
 import se.leap.bitmaskclient.providersetup.models.LeapSRPSession;
 import se.leap.bitmaskclient.providersetup.models.SrpCredentials;
 import se.leap.bitmaskclient.providersetup.models.SrpRegistrationData;
 import se.leap.bitmaskclient.tor.TorStatusObservable;
-
-import static se.leap.bitmaskclient.R.string.certificate_error;
-import static se.leap.bitmaskclient.R.string.error_io_exception_user_message;
-import static se.leap.bitmaskclient.R.string.error_json_exception_user_message;
-import static se.leap.bitmaskclient.R.string.error_no_such_algorithm_exception_user_message;
-import static se.leap.bitmaskclient.R.string.malformed_url;
-import static se.leap.bitmaskclient.R.string.server_unreachable_message;
-import static se.leap.bitmaskclient.R.string.service_is_down_error;
-import static se.leap.bitmaskclient.R.string.vpn_certificate_is_invalid;
-import static se.leap.bitmaskclient.R.string.warning_corrupted_provider_cert;
-import static se.leap.bitmaskclient.R.string.warning_corrupted_provider_details;
-import static se.leap.bitmaskclient.R.string.warning_expired_provider_cert;
-import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_PROVIDER_API_EVENT;
-import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_CODE;
-import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_KEY;
-import static se.leap.bitmaskclient.base.models.Constants.CREDENTIALS_PASSWORD;
-import static se.leap.bitmaskclient.base.models.Constants.CREDENTIALS_USERNAME;
-import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_START;
-import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
-import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_PRIVATE_KEY;
-import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.base.models.Provider.CA_CERT;
-import static se.leap.bitmaskclient.base.models.Provider.GEOIP_URL;
-import static se.leap.bitmaskclient.base.models.Provider.PROVIDER_API_IP;
-import static se.leap.bitmaskclient.base.models.Provider.PROVIDER_IP;
-import static se.leap.bitmaskclient.base.utils.ConfigHelper.getFingerprintFromCertificate;
-import static se.leap.bitmaskclient.base.utils.ConfigHelper.getProviderFormattedString;
-import static se.leap.bitmaskclient.base.utils.ConfigHelper.parseRsaKeyFromString;
-import static se.leap.bitmaskclient.base.utils.PreferenceHelper.deleteProviderDetailsFromPreferences;
-import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getFromPersistedProvider;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.BACKEND_ERROR_KEY;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.BACKEND_ERROR_MESSAGE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_DOWNLOADED_EIP_SERVICE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_DOWNLOADED_GEOIP_JSON;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_DOWNLOADED_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.DOWNLOAD_GEOIP_JSON;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.DOWNLOAD_SERVICE_JSON;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.DOWNLOAD_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.ERRORID;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.ERRORS;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.FAILED_LOGIN;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.FAILED_SIGNUP;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_EIP_SERVICE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_GEOIP_JSON;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.INITIAL_ACTION;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.LOGOUT_FAILED;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.LOG_IN;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.LOG_OUT;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.MISSING_NETWORK_CONNECTION;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.PARAMETERS;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.PROVIDER_NOK;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.PROVIDER_OK;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.RECEIVER_KEY;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.SET_UP_PROVIDER;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.SIGN_UP;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.SUCCESSFUL_LOGIN;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.SUCCESSFUL_LOGOUT;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.SUCCESSFUL_SIGNUP;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.TOR_TIMEOUT;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.UPDATE_INVALID_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.UPDATE_PROVIDER_DETAILS;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.USER_MESSAGE;
-import static se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog.DOWNLOAD_ERRORS.ERROR_CERTIFICATE_PINNING;
-import static se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog.DOWNLOAD_ERRORS.ERROR_CORRUPTED_PROVIDER_JSON;
-import static se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog.DOWNLOAD_ERRORS.ERROR_INVALID_CERTIFICATE;
-import static se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog.DOWNLOAD_ERRORS.ERROR_TOR_TIMEOUT;
-import static se.leap.bitmaskclient.tor.TorStatusObservable.TorStatus.OFF;
-import static se.leap.bitmaskclient.tor.TorStatusObservable.TorStatus.ON;
-import static se.leap.bitmaskclient.tor.TorStatusObservable.getProxyPort;
 
 /**
  * Implements the logic of the http api calls. The methods of this class needs to be called from
@@ -192,6 +206,14 @@ public abstract class ProviderApiManagerBase {
             return;
         }
 
+        if (parameters.containsKey(DELAY)) {
+            try {
+                Thread.sleep(parameters.getLong(DELAY));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
         if (!serviceCallback.hasNetworkConnection()) {
             Bundle result = new Bundle();
             setErrorResult(result, R.string.error_network_connection, null);
@@ -200,11 +222,14 @@ public abstract class ProviderApiManagerBase {
         }
 
          try {
-             if (PreferenceHelper.hasSnowflakePrefs(preferences)) {
+             if (PreferenceHelper.hasSnowflakePrefs(preferences) && !VpnStatus.isVPNActive()) {
                  startTorProxy();
              }
         } catch (InterruptedException | IllegalStateException e) {
             e.printStackTrace();
+             Bundle result = new Bundle();
+             setErrorResultAction(result, action);
+             sendToReceiverOrBroadcast(receiver, TOR_EXCEPTION, result, provider);
             return;
         } catch (TimeoutException e) {
              serviceCallback.stopTorService();
@@ -273,6 +298,28 @@ public abstract class ProviderApiManagerBase {
                 }
                 ProviderObservable.getInstance().setProviderForDns(null);
                 break;
+            case QUIETLY_UPDATE_VPN_CERTIFICATE:
+                ProviderObservable.getInstance().setProviderForDns(provider);
+                result = updateVpnCertificate(provider);
+                if (result.getBoolean(BROADCAST_RESULT_KEY)) {
+                    Log.d(TAG, "successfully downloaded VPN certificate");
+                    provider.setShouldUpdateVpnCertificate(false);
+                    PreferenceHelper.storeProviderInPreferences(preferences, provider);
+                    ProviderObservable.getInstance().updateProvider(provider);
+                }
+                ProviderObservable.getInstance().setProviderForDns(null);
+                break;
+            case DOWNLOAD_MOTD:
+                MotdClient client = new MotdClient(provider);
+                JSONObject motd = client.fetchJson();
+                if (motd != null) {
+                    provider.setMotdJson(motd);
+                    provider.setLastMotdUpdate(System.currentTimeMillis());
+                }
+                PreferenceHelper.storeProviderInPreferences(preferences, provider);
+                ProviderObservable.getInstance().updateProvider(provider);
+                break;
+
             case UPDATE_INVALID_VPN_CERTIFICATE:
                 ProviderObservable.getInstance().setProviderForDns(provider);
                 result = updateVpnCertificate(provider);
@@ -369,7 +416,7 @@ public abstract class ProviderApiManagerBase {
 
     private void addErrorMessageToJson(JSONObject jsonObject, String errorMessage, String errorId, String initialAction) {
         try {
-            jsonObject.put(ERRORS, errorMessage);
+            jsonObject.putOpt(ERRORS, errorMessage);
             jsonObject.putOpt(ERRORID, errorId);
             jsonObject.putOpt(INITIAL_ACTION, initialAction);
         } catch (JSONException e) {
@@ -598,6 +645,10 @@ public abstract class ProviderApiManagerBase {
                 break;
             case INCORRECTLY_DOWNLOADED_GEOIP_JSON:
                 event = "download menshen service json.";
+                break;
+            case TOR_TIMEOUT:
+            case TOR_EXCEPTION:
+                event = "start tor for censorship circumvention";
                 break;
             default:
                 break;
@@ -884,7 +935,11 @@ public abstract class ProviderApiManagerBase {
             provider.setVpnCertificate(getPersistedVPNCertificate(providerDomain));
             provider.setProviderApiIp(getPersistedProviderApiIp(providerDomain));
             provider.setProviderIp(getPersistedProviderIp(providerDomain));
-            provider.setGeoipUrl(getPersistedGeoIp(providerDomain));
+            provider.setGeoipUrl(getPersistedGeoIp(providerDomain)); // TODO: do we really need to persist the Geoip URL??
+            provider.setLastMotdSeen(getPersistedMotdLastSeen(providerDomain));
+            provider.setMotdLastSeenHashes(getPersistedMotdHashes(providerDomain));
+            provider.setLastMotdUpdate(getPersistedMotdLastUpdate(providerDomain));
+            provider.setMotdJson(getPersistedMotd(providerDomain));
         }
     }
 
@@ -959,6 +1014,15 @@ public abstract class ProviderApiManagerBase {
         return result;
     }
 
+    Bundle setErrorResultAction(Bundle result, String initialAction) {
+        JSONObject errorJson = new JSONObject();
+        addErrorMessageToJson(errorJson, null, null, initialAction);
+        VpnStatus.logWarning("[API] error: " + initialAction + " failed.");
+        result.putString(ERRORS, errorJson.toString());
+        result.putBoolean(BROADCAST_RESULT_KEY, false);
+        return result;
+    }
+
     Bundle setErrorResult(Bundle result, int errorMessageId, String errorId) {
         return setErrorResult(result, errorMessageId, errorId, null);
     }
@@ -1006,13 +1070,29 @@ public abstract class ProviderApiManagerBase {
         return getFromPersistedProvider(GEOIP_URL, providerDomain, preferences);
     }
 
-    protected boolean hasUpdatedProviderDetails(String domain) {
-        return preferences.contains(Provider.KEY + "." + domain) && preferences.contains(CA_CERT + "." + domain);
+    protected JSONObject getPersistedMotd(String providerDomain) {
+        try {
+            return new JSONObject(getFromPersistedProvider(PROVIDER_MOTD, providerDomain, preferences));
+        } catch (JSONException e) {
+            return new JSONObject();
+        }
     }
 
-    protected String getDomainFromMainURL(String mainUrl) {
-        return mainUrl.replaceFirst("http[s]?://", "").replaceFirst("/.*", "");
+    protected long getPersistedMotdLastSeen(String providerDomain) {
+        return getLongFromPersistedProvider(PROVIDER_MOTD_LAST_SEEN, providerDomain, preferences);
+    }
 
+    protected long getPersistedMotdLastUpdate(String providerDomain) {
+        return getLongFromPersistedProvider(PROVIDER_MOTD_LAST_UPDATED, providerDomain, preferences);
+    }
+
+    protected Set<String> getPersistedMotdHashes(String providerDomain) {
+        return getStringSetFromPersistedProvider(PROVIDER_MOTD_HASHES, providerDomain, preferences);
+    }
+
+
+    protected boolean hasUpdatedProviderDetails(String domain) {
+        return preferences.contains(Provider.KEY + "." + domain) && preferences.contains(CA_CERT + "." + domain);
     }
 
     /**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 LEAP Encryption Access Project and contributers
+ * Copyright (c) 2022 LEAP Encryption Access Project and contributers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@ import se.leap.bitmaskclient.R;
 
 import static android.content.Intent.CATEGORY_DEFAULT;
 import static se.leap.bitmaskclient.appUpdate.DownloadBroadcastReceiver.ACTION_DOWNLOAD;
+import static se.leap.bitmaskclient.base.utils.ConfigHelper.getPendingIntentFlags;
 
 public class DownloadNotificationManager {
     private Context context;
@@ -84,6 +85,7 @@ public class DownloadNotificationManager {
         notificationBuilder
                 .setDefaults(Notification.DEFAULT_ALL)
                 .setAutoCancel(false)
+                .setNotificationSilent()
                 .setOngoing(true)
                 .setSmallIcon(android.R.drawable.stat_sys_download)
                 .setContentTitle(context.getString(R.string.version_update_apk_description, context.getString(R.string.app_name)))
@@ -129,12 +131,13 @@ public class DownloadNotificationManager {
     private PendingIntent getDownloadIntent() {
         Intent downloadIntent = new Intent(context, DownloadBroadcastReceiver.class);
         downloadIntent.setAction(ACTION_DOWNLOAD);
-        return PendingIntent.getBroadcast(context, 0, downloadIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+        return PendingIntent.getBroadcast(context, 0, downloadIntent, getPendingIntentFlags());
     }
 
     private PendingIntent getInstallIntent() {
         Intent installIntent = new Intent(context, InstallActivity.class);
-        return PendingIntent.getActivity(context, 0, installIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+        return PendingIntent.getActivity(context, 0, installIntent, getPendingIntentFlags());
     }
 
     public void cancelNotifications() {

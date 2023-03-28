@@ -3,7 +3,7 @@
   <string name="retry">Reintentar</string>
   <string name="repository_url_text">El código fuente está disponible en https://0xacab.org/leap/bitmask_android</string>
   <string name="leap_tracker">Rastreador de problemas disponible en https://0xacab.org/leap/bitmask_android/issues</string>
-  <string name="translation_project_text">Las traducciones son bienvenidas y apreciadas. Mira nuestro proyecto de Transifex en https://www.transifex.com/projects/p/bitmask-android/</string>
+  <string name="translation_project_text">Las traducciones son bienvenidas y apreciadas. Mira nuestro proyecto de Transifex en https://www.transifex.com/projects/p/bitmask/</string>
   <string name="switch_provider_menu_option">Cambiar de proveedor</string>
   <string name="info">información</string>
   <string name="show_connection_details">Mostrar detalles de la conexión</string>
@@ -67,6 +67,9 @@
   <string name="authentication_failed_message">Autentificación fallida</string>
   <string name="registration_failed_message">El registro falló.</string>
   <string name="eip_status_start_pending">Iniciando conexión</string>
+  <string name="eip_status_connecting">Conectando a VPN</string>
+  <string name="eip_status_unsecured">Conexión Insegura</string>
+  <string name="eip_status_secured">Conexión Segura</string>
   <string name="eip_cancel_connect_title">¿Cancelar conexión?</string>
   <string name="eip_cancel_connect_text">Se está intentando establecer la conexión. ¿Desea cancelarla?</string>
   <string name="eip.warning.browser_inconsistency">¿Desactivar la conexión VPN? Cuando la VPN está desactivada, su información personal se puede filtrar a su proveedor de Internet o red local.</string>
@@ -134,6 +137,7 @@
   <string name="warning_exclude_apps_message">Ten cuidado de excluir aplicaciones de la VPN. Esto revelará tu identidad y comprometerá tu seguridad.</string>
   <plurals name="subtitle_exclude_apps">
     <item quantity="one">%d aplicación desprotegida</item>
+    <item quantity="many">%d aplicaciones desprotegidas</item>
     <item quantity="other">%d aplicaciones desprotegidas</item>
   </plurals>
   <string name="warning_no_more_gateways_use_pt">%s no se pudo conectar. Puede ser que las conexiones al VPN estén bloqueadas. ¿Quieres intentar a conectar usando conexiones ofuscadas?</string>
@@ -201,4 +205,6 @@
   <string name="disabled_while_udp_on">Deshabilitado mientras UDP está activado.</string>
   <string name="advanced_settings">Configuración avanzada</string>
   <string name="cancel_connection">Desconectar</string>
+  <string name="unknown_location">Ubicación desconocida</string>
+  <string name="splash_footer">Desarrollado por LEAP</string>
 </resources>

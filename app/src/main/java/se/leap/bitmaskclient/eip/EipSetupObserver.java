@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 LEAP Encryption Access Project and contributers
+ * Copyright (c) 2021 LEAP Encryption Access Project and contributers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,41 @@
  */
 
 package se.leap.bitmaskclient.eip;
+
+import static android.app.Activity.RESULT_CANCELED;
+import static android.content.Intent.CATEGORY_DEFAULT;
+import static de.blinkt.openvpn.core.ConnectionStatus.LEVEL_CONNECTING_NO_SERVER_REPLY_YET;
+import static de.blinkt.openvpn.core.ConnectionStatus.LEVEL_NOTCONNECTED;
+import static se.leap.bitmaskclient.appUpdate.DownloadServiceCommand.CHECK_VERSION_FILE;
+import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_EIP_EVENT;
+import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_GATEWAY_SETUP_OBSERVER_EVENT;
+import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_PROVIDER_API_EVENT;
+import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_CODE;
+import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_KEY;
+import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_LAUNCH_VPN;
+import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_PREPARE_VPN;
+import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_START;
+import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_START_ALWAYS_ON_VPN;
+import static se.leap.bitmaskclient.base.models.Constants.EIP_EARLY_ROUTES;
+import static se.leap.bitmaskclient.base.models.Constants.EIP_N_CLOSEST_GATEWAY;
+import static se.leap.bitmaskclient.base.models.Constants.EIP_REQUEST;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_PROFILE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_DOWNLOADED_EIP_SERVICE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_DOWNLOADED_GEOIP_JSON;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.DELAY;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.DOWNLOAD_MOTD;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_EIP_SERVICE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_GEOIP_JSON;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.PROVIDER_NOK;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.PROVIDER_OK;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.QUIETLY_UPDATE_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.TOR_EXCEPTION;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.TOR_TIMEOUT;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.UPDATE_INVALID_VPN_CERTIFICATE;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -45,38 +80,7 @@ import se.leap.bitmaskclient.base.utils.PreferenceHelper;
 import se.leap.bitmaskclient.providersetup.ProviderAPI;
 import se.leap.bitmaskclient.providersetup.ProviderAPICommand;
 import se.leap.bitmaskclient.tor.TorServiceCommand;
-import se.leap.bitmaskclient.tor.TorServiceConnection;
 import se.leap.bitmaskclient.tor.TorStatusObservable;
-
-import static android.app.Activity.RESULT_CANCELED;
-import static android.content.Intent.CATEGORY_DEFAULT;
-import static de.blinkt.openvpn.core.ConnectionStatus.LEVEL_CONNECTING_NO_SERVER_REPLY_YET;
-import static de.blinkt.openvpn.core.ConnectionStatus.LEVEL_NOTCONNECTED;
-import static se.leap.bitmaskclient.appUpdate.DownloadServiceCommand.CHECK_VERSION_FILE;
-import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_EIP_EVENT;
-import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_GATEWAY_SETUP_OBSERVER_EVENT;
-import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_PROVIDER_API_EVENT;
-import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_CODE;
-import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_KEY;
-import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_LAUNCH_VPN;
-import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_PREPARE_VPN;
-import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_START;
-import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_START_ALWAYS_ON_VPN;
-import static se.leap.bitmaskclient.base.models.Constants.EIP_EARLY_ROUTES;
-import static se.leap.bitmaskclient.base.models.Constants.EIP_N_CLOSEST_GATEWAY;
-import static se.leap.bitmaskclient.base.models.Constants.EIP_REQUEST;
-import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
-import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_PROFILE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_DOWNLOADED_EIP_SERVICE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_DOWNLOADED_GEOIP_JSON;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_EIP_SERVICE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_GEOIP_JSON;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.PROVIDER_NOK;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.PROVIDER_OK;
-import static se.leap.bitmaskclient.tor.TorStatusObservable.TorStatus.OFF;
 
 /**
  * Created by cyberta on 05.12.18.
@@ -86,7 +90,7 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
     private static final String TAG = EipSetupObserver.class.getName();
 
     private static final int UPDATE_CHECK_TIMEOUT = 1000*60*60*24*7;
-    private Context context;
+    private final Context appContext;
     private VpnProfile setupVpnProfile;
     private String observedProfileFromVpnStatus;
     AtomicInteger reconnectTry = new AtomicInteger();
@@ -97,7 +101,7 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
     private static EipSetupObserver instance;
 
     private EipSetupObserver(Context context, SharedPreferences preferences) {
-        this.context = context;
+        this.appContext = context.getApplicationContext();
         this.preferences = preferences;
         IntentFilter updateIntentFilter = new IntentFilter(BROADCAST_GATEWAY_SETUP_OBSERVER_EVENT);
         updateIntentFilter.addAction(BROADCAST_EIP_EVENT);
@@ -105,7 +109,7 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
         updateIntentFilter.addAction(TorService.ACTION_STATUS);
         updateIntentFilter.addAction(TorService.ACTION_ERROR);
         updateIntentFilter.addCategory(CATEGORY_DEFAULT);
-        LocalBroadcastManager.getInstance(context.getApplicationContext()).registerReceiver(this, updateIntentFilter);
+        LocalBroadcastManager.getInstance(context).registerReceiver(this, updateIntentFilter);
         instance = this;
         VpnStatus.addLogListener(this);
     }
@@ -174,7 +178,7 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
         Log.d(TAG, "handle Tor status event: " + status);
         Integer bootstrap = intent.getIntExtra(TorService.EXTRA_STATUS_DETAIL_BOOTSTRAP, -1);
         String logKey = intent.getStringExtra(TorService.EXTRA_STATUS_DETAIL_LOGKEY);
-        TorStatusObservable.updateState(context, status, bootstrap, logKey);
+        TorStatusObservable.updateState(appContext, status, bootstrap, logKey);
     }
 
 
@@ -193,14 +197,18 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
                 ProviderObservable.getInstance().updateProvider(provider);
                 PreferenceHelper.storeProviderInPreferences(preferences, provider);
                 if (EipStatus.getInstance().isDisconnected()) {
-                    EipCommand.startVPN(context, false);
+                    EipCommand.startVPN(appContext, false);
                 }
                 break;
             case CORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE:
                 provider = resultData.getParcelable(PROVIDER_KEY);
                 ProviderObservable.getInstance().updateProvider(provider);
                 PreferenceHelper.storeProviderInPreferences(preferences, provider);
-                EipCommand.startVPN(context, false);
+                EipCommand.startVPN(appContext, false);
+                EipStatus.getInstance().setUpdatingVpnCert(false);
+                if (TorStatusObservable.isRunning()) {
+                    TorServiceCommand.stopTorServiceAsync(appContext);
+                }
                 break;
             case CORRECTLY_DOWNLOADED_GEOIP_JSON:
                 provider = resultData.getParcelable(PROVIDER_KEY);
@@ -211,17 +219,34 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
             case INCORRECTLY_DOWNLOADED_GEOIP_JSON:
                 maybeStartEipService(resultData);
                 break;
-            case PROVIDER_NOK:
             case INCORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE:
+                EipStatus.getInstance().setUpdatingVpnCert(false);
+                if (TorStatusObservable.isRunning()) {
+                    TorServiceCommand.stopTorServiceAsync(appContext);
+                }
+                break;
+            case PROVIDER_NOK:
             case INCORRECTLY_DOWNLOADED_EIP_SERVICE:
             case INCORRECTLY_DOWNLOADED_VPN_CERTIFICATE:
-                if (TorStatusObservable.getStatus() != OFF) {
-                    TorServiceCommand.stopTorServiceAsync(context);
+                if (TorStatusObservable.isRunning()) {
+                    TorServiceCommand.stopTorServiceAsync(appContext);
                 }
                 Log.d(TAG, "PROVIDER NOK - FETCH FAILED");
                 break;
             case PROVIDER_OK:
                 Log.d(TAG, "PROVIDER OK - FETCH SUCCESSFUL");
+                break;
+            case TOR_TIMEOUT:
+            case TOR_EXCEPTION:
+                try {
+                    JSONObject jsonObject = new JSONObject(resultData.getString(ProviderAPI.ERRORS));
+                    String initialAction = jsonObject.optString(ProviderAPI.INITIAL_ACTION);
+                    if (UPDATE_INVALID_VPN_CERTIFICATE.equals(initialAction)) {
+                        EipStatus.getInstance().setUpdatingVpnCert(false);
+                    }
+                } catch (Exception e) {
+                    //ignore
+                }
                 break;
             default:
                 break;
@@ -235,7 +260,7 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
     private void maybeStartEipService(Bundle resultData) {
         if (resultData.getBoolean(EIP_ACTION_START)) {
             boolean earlyRoutes = resultData.getBoolean(EIP_EARLY_ROUTES);
-            EipCommand.startVPN(context, earlyRoutes);
+            EipCommand.startVPN(appContext, earlyRoutes);
         }
     }
 
@@ -262,14 +287,14 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
                     switch (error) {
                         case NO_MORE_GATEWAYS:
                             finishGatewaySetup(false);
-                            EipCommand.startBlockingVPN(context);
+                            EipCommand.startBlockingVPN(appContext);
                             break;
                         case ERROR_INVALID_PROFILE:
                             selectNextGateway();
                             break;
                         default:
                             finishGatewaySetup(false);
-                            EipCommand.stopVPN(context);
+                            EipCommand.stopVPN(appContext);
                             EipStatus.refresh();
                     }
                 }
@@ -345,11 +370,27 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
             Provider provider = ProviderObservable.getInstance().getCurrentProvider();
             if (setupNClosestGateway.get() > 0 || provider.shouldUpdateEipServiceJson()) {
                 //setupNClostestGateway > 0: at least one failed gateway -> did the provider change it's gateways?
-                ProviderAPICommand.execute(context, ProviderAPI.DOWNLOAD_SERVICE_JSON, provider);
+                Bundle parameters = new Bundle();
+                parameters.putLong(DELAY, 500);
+                ProviderAPICommand.execute(appContext, ProviderAPI.DOWNLOAD_SERVICE_JSON, parameters, provider);
             }
 
             if (shouldCheckAppUpdate()) {
-                DownloadServiceCommand.execute(context, CHECK_VERSION_FILE);
+                Bundle parameters = new Bundle();
+                parameters.putLong(DELAY, 500);
+                DownloadServiceCommand.execute(appContext, CHECK_VERSION_FILE, parameters);
+            }
+
+            if (provider.shouldUpdateVpnCertificate()) {
+                Bundle parameters = new Bundle();
+                parameters.putLong(DELAY, 500);
+                ProviderAPICommand.execute(appContext, QUIETLY_UPDATE_VPN_CERTIFICATE, parameters, provider);
+            }
+
+            if (provider.shouldUpdateMotdJson()) {
+                Bundle parameters = new Bundle();
+                parameters.putLong(DELAY, 500);
+                ProviderAPICommand.execute(appContext, DOWNLOAD_MOTD, parameters, provider);
             }
             finishGatewaySetup(false);
         } else if ("TCP_CONNECT".equals(state)) {
@@ -358,13 +399,13 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
     }
 
     private boolean shouldCheckAppUpdate() {
-        return System.currentTimeMillis() - PreferenceHelper.getLastAppUpdateCheck(context) >= UPDATE_CHECK_TIMEOUT;
+        return System.currentTimeMillis() - PreferenceHelper.getLastAppUpdateCheck(appContext) >= UPDATE_CHECK_TIMEOUT;
     }
 
     private void selectNextGateway() {
         changingGateway.set(true);
         reconnectTry.set(0);
-        EipCommand.startVPN(context, false, setupNClosestGateway.get() + 1);
+        EipCommand.startVPN(appContext, false, setupNClosestGateway.get() + 1);
     }
 
     private void finishGatewaySetup(boolean changingGateway) {
@@ -374,8 +415,8 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
         observedProfileFromVpnStatus = null;
         this.changingGateway.set(changingGateway);
         this.reconnectTry.set(0);
-        if (TorStatusObservable.getStatus() != OFF) {
-            TorServiceCommand.stopTorServiceAsync(context);
+        if (TorStatusObservable.isRunning()) {
+            TorServiceCommand.stopTorServiceAsync(appContext);
         }
     }
 
@@ -396,9 +437,9 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
                 case SHAPESHIFTER:
                     VpnProfile profile = VpnStatus.getLastConnectedVpnProfile();
                     if (profile == null) {
-                        EipCommand.startVPN(context, false, 0);
+                        EipCommand.startVPN(appContext, false, 0);
                     } else {
-                        GatewaysManager gatewaysManager = new GatewaysManager(context.getApplicationContext());
+                        GatewaysManager gatewaysManager = new GatewaysManager(appContext);
                         int position = gatewaysManager.getPosition(profile);
                         setupNClosestGateway.set(position >= 0 ? position : 0);
                         selectNextGateway();

@@ -4,8 +4,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:layout_marginLeft="12sp"
-    tools:context=".base.MainActivity" >
+    android:layout_marginLeft="@dimen/stdpadding"
+    android:layout_marginStart="@dimen/stdpadding"
+    android:layout_marginEnd="@dimen/stdpadding"
+    android:layout_marginRight="@dimen/stdpadding"
+    tools:context=".base.MainActivity"
+    tools:viewBindingIgnore="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -20,7 +24,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="12sp" />
+            android:layout_height="12dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/terms_of_service"
@@ -40,7 +44,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="12sp" />
+            android:layout_height="12dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -58,7 +62,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="18sp" />
+            android:layout_height="18dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -69,7 +73,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="12sp" />
+            android:layout_height="12dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -80,7 +84,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="18sp" />
+            android:layout_height="18dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -90,7 +94,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -114,7 +118,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -131,7 +135,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -147,7 +151,7 @@
             android:text="@string/copyright_openssl" />
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -164,7 +168,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -181,7 +185,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -198,7 +202,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -215,7 +219,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -232,7 +236,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -249,7 +253,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -266,7 +270,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -283,7 +287,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"
@@ -300,7 +304,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="20sp" />
+            android:layout_height="20dp" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="match_parent"

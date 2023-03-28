@@ -5,7 +5,9 @@
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="se.leap.bitmaskclient.base.MainActivity">
+    tools:context="se.leap.bitmaskclient.base.MainActivity"
+    tools:viewBindingIgnore="true"
+    >
 
 
     <!-- As the main content view, the view below consumes the entire
@@ -20,8 +22,6 @@
             android:minHeight="?attr/actionBarSize"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:titleTextColor="@color/colorActionBarTitleFont"
-            app:subtitleTextColor="@color/colorActionBarSubtitleFont"
             android:background="?attr/colorPrimary">
         </androidx.appcompat.widget.Toolbar>
 

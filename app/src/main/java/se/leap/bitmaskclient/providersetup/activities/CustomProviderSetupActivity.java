@@ -31,10 +31,12 @@ import java.io.IOException;
 import se.leap.bitmaskclient.BuildConfig;
 import se.leap.bitmaskclient.R;
 import se.leap.bitmaskclient.base.models.Provider;
+import se.leap.bitmaskclient.base.utils.ConfigHelper;
 import se.leap.bitmaskclient.providersetup.ProviderAPICommand;
 
 import static se.leap.bitmaskclient.BuildConfig.customProviderApiIp;
 import static se.leap.bitmaskclient.BuildConfig.customProviderIp;
+import static se.leap.bitmaskclient.BuildConfig.customProviderMotdUrl;
 import static se.leap.bitmaskclient.BuildConfig.customProviderUrl;
 import static se.leap.bitmaskclient.BuildConfig.geoipUrl;
 import static se.leap.bitmaskclient.base.models.Constants.EXT_JSON;
@@ -71,15 +73,16 @@ public class CustomProviderSetupActivity extends ProviderSetupBaseActivity {
     private void setDefaultProvider() {
         try {
             AssetManager assetsManager = getAssets();
-            Provider customProvider = new Provider(customProviderUrl, geoipUrl, customProviderIp, customProviderApiIp);
-            String certificate = loadInputStreamAsString(assetsManager.open(customProvider.getDomain() + EXT_PEM));
-            String providerDefinition = loadInputStreamAsString(assetsManager.open(customProvider.getDomain() + EXT_JSON));
+            Provider customProvider = new Provider(customProviderUrl, geoipUrl, customProviderMotdUrl, customProviderIp, customProviderApiIp);
+            String domain = ConfigHelper.getDomainFromMainURL(customProviderUrl);
+            String certificate = loadInputStreamAsString(assetsManager.open(domain + EXT_PEM));
+            String providerDefinition = loadInputStreamAsString(assetsManager.open(domain + EXT_JSON));
             customProvider.setCaCert(certificate);
             customProvider.define(new JSONObject(providerDefinition));
             setProvider(customProvider);
         } catch (IOException | JSONException e) {
             e.printStackTrace();
-            setProvider(new Provider(customProviderUrl, geoipUrl, customProviderIp, customProviderApiIp));
+            setProvider(new Provider(customProviderUrl, geoipUrl, customProviderMotdUrl, customProviderIp, customProviderApiIp));
         }
     }
 

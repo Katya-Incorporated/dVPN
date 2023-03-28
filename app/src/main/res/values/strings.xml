@@ -3,7 +3,7 @@
   <string name="retry">Retry</string>
   <string name="repository_url_text">Source code available at https://0xacab.org/leap/bitmask_android</string>
   <string name="leap_tracker">Issue tracker available at https://0xacab.org/leap/bitmask_android/issues</string>
-  <string name="translation_project_text">Translations welcome and appreciated. See our Transifex project at https://www.transifex.com/projects/p/bitmask-android/</string>
+  <string name="translation_project_text">Translations welcome and appreciated. See our Transifex project at https://www.transifex.com/projects/p/bitmask/</string>
   <string name="switch_provider_menu_option">Switch provider</string>
   <string name="info">info</string>
   <string name="show_connection_details">Show connection details</string>
@@ -67,6 +67,9 @@
   <string name="authentication_failed_message">Authentication failed</string>
   <string name="registration_failed_message">Registration failed</string>
   <string name="eip_status_start_pending">Initiating connection</string>
+  <string name="eip_status_connecting">Connecting VPN</string>
+  <string name="eip_status_unsecured">Unsecured Connection</string>
+  <string name="eip_status_secured">Secured Connection</string>
   <string name="eip_cancel_connect_title">Cancel connection?</string>
   <string name="eip_cancel_connect_text">There is a connection attempt in progress.  Do you wish to cancel it?</string>
   <string name="eip.warning.browser_inconsistency">Turn off VPN connection? When the VPN is off, you may leak personal information to your Internet provider or local network.</string>
@@ -139,7 +142,7 @@
   <string name="warning_no_more_gateways_use_pt">%s could not connect. It might be that VPN connections get blocked. Do you want to try to connect using obfuscated connections?</string>
   <string name="warning_no_more_gateways_no_pt">%s could not connect. Do you want to retry?</string>
   <string name="warning_no_more_gateways_use_ovpn">%s could not connect using obfuscated VPN connections. Do you want to try to connect using a standard VPN?</string>
-  <string name="warning_no_more_gateways_manual_gw_selection">%1$s could not connect to %2$s. Do you want to try to connect automatically with best location?</string>
+  <string name="warning_no_more_gateways_manual_gw_selection">%1$s could not connect to %2$s. Do you want to try to connect automatically to the best location?</string>
   <string name="warning_option_try_best">Try best location</string>
   <string name="warning_option_try_pt">Try obfuscated connection</string>
   <string name="warning_option_try_ovpn">Try standard connection</string>
@@ -195,11 +198,12 @@
   <string name="hint_bridges">Only locations supporting bridges are currently selectable.</string>
   <string name="option_disable_bridges">Disable bridges</string>
   <string name="eip_state_insecure">Connection insecure</string>
-  <string name="connection_not_connected" >You may be leaking information to your internet provider or local network.</string>
+  <string name="connection_not_connected">You may be leaking information to your internet provider or local network.</string>
   <string name="eip_state_no_network">You have no working Internet connection. Once you get it back, you will be automatically connected to</string>
   <string name="eip_state_blocking">%1$s is blocking all internet traffic.</string>
   <string name="disabled_while_udp_on">Disabled while UDP is on.</string>
   <string name="advanced_settings">Advanced settings</string>
   <string name="cancel_connection">Disconnect</string>
-
+  <string name="unknown_location">Unknown location</string>
+  <string name="splash_footer">Developed by LEAP</string>
 </resources>

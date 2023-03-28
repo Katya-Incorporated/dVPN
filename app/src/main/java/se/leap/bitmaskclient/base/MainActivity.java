@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 LEAP Encryption Access Project and contributers
+ * Copyright (c) 2021 LEAP Encryption Access Project and contributers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,41 +17,7 @@
 package se.leap.bitmaskclient.base;
 
 
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.os.Bundle;
-import android.util.Log;
-
-import androidx.annotation.StringRes;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.util.Observable;
-import java.util.Observer;
-
-import se.leap.bitmaskclient.R;
-import se.leap.bitmaskclient.base.fragments.EipFragment;
-import se.leap.bitmaskclient.base.fragments.ExcludeAppsFragment;
-import se.leap.bitmaskclient.base.fragments.LogFragment;
-import se.leap.bitmaskclient.base.fragments.MainActivityErrorDialog;
-import se.leap.bitmaskclient.base.fragments.NavigationDrawerFragment;
-import se.leap.bitmaskclient.base.fragments.SettingsFragment;
-import se.leap.bitmaskclient.base.models.Provider;
-import se.leap.bitmaskclient.base.models.ProviderObservable;
-import se.leap.bitmaskclient.base.utils.PreferenceHelper;
-import se.leap.bitmaskclient.eip.EIP;
-import se.leap.bitmaskclient.eip.EipCommand;
-import se.leap.bitmaskclient.eip.EipSetupListener;
-import se.leap.bitmaskclient.eip.EipSetupObserver;
-import se.leap.bitmaskclient.providersetup.activities.LoginActivity;
-import se.leap.bitmaskclient.providersetup.models.LeapSRPSession;
-
+import static androidx.appcompat.app.ActionBar.DISPLAY_SHOW_CUSTOM;
 import static se.leap.bitmaskclient.R.string.downloading_vpn_certificate_failed;
 import static se.leap.bitmaskclient.R.string.vpn_certificate_user_message;
 import static se.leap.bitmaskclient.base.models.Constants.ASK_TO_CANCEL_VPN;
@@ -61,6 +27,7 @@ import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_LAUNCH_VPN;
 import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_PREPARE_VPN;
 import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_START;
 import static se.leap.bitmaskclient.base.models.Constants.EIP_REQUEST;
+import static se.leap.bitmaskclient.base.models.Constants.EXTRA_MOTD_MSG;
 import static se.leap.bitmaskclient.base.models.Constants.LOCATION;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
 import static se.leap.bitmaskclient.base.models.Constants.REQUEST_CODE_CONFIGURE_LEAP;
@@ -74,8 +41,52 @@ import static se.leap.bitmaskclient.providersetup.ProviderAPI.ERRORID;
 import static se.leap.bitmaskclient.providersetup.ProviderAPI.ERRORS;
 import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_DOWNLOADED_EIP_SERVICE;
 import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.TOR_EXCEPTION;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.TOR_TIMEOUT;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.UPDATE_INVALID_VPN_CERTIFICATE;
 import static se.leap.bitmaskclient.providersetup.ProviderAPI.USER_MESSAGE;
 
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.Gravity;
+
+import androidx.annotation.ColorInt;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.Observable;
+import java.util.Observer;
+
+import se.leap.bitmaskclient.BuildConfig;
+import se.leap.bitmaskclient.R;
+import se.leap.bitmaskclient.base.fragments.EipFragment;
+import se.leap.bitmaskclient.base.fragments.ExcludeAppsFragment;
+import se.leap.bitmaskclient.base.fragments.LogFragment;
+import se.leap.bitmaskclient.base.fragments.MainActivityErrorDialog;
+import se.leap.bitmaskclient.base.fragments.MotdFragment;
+import se.leap.bitmaskclient.base.fragments.NavigationDrawerFragment;
+import se.leap.bitmaskclient.base.fragments.SettingsFragment;
+import se.leap.bitmaskclient.base.models.Provider;
+import se.leap.bitmaskclient.base.models.ProviderObservable;
+import se.leap.bitmaskclient.base.utils.PreferenceHelper;
+import se.leap.bitmaskclient.base.views.ActionBarTitle;
+import se.leap.bitmaskclient.eip.EIP;
+import se.leap.bitmaskclient.eip.EipCommand;
+import se.leap.bitmaskclient.eip.EipSetupListener;
+import se.leap.bitmaskclient.eip.EipSetupObserver;
+import se.leap.bitmaskclient.providersetup.ProviderAPI;
+import se.leap.bitmaskclient.providersetup.activities.LoginActivity;
+import se.leap.bitmaskclient.providersetup.models.LeapSRPSession;
 
 public class MainActivity extends AppCompatActivity implements EipSetupListener, Observer {
 
@@ -88,6 +99,7 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
     public final static String ACTION_SHOW_VPN_FRAGMENT = "action_show_vpn_fragment";
     public final static String ACTION_SHOW_LOG_FRAGMENT = "action_show_log_fragment";
     public final static String ACTION_SHOW_DIALOG_FRAGMENT = "action_show_dialog_fragment";
+    public final static String ACTION_SHOW_MOTD_FRAGMENT = "action_show_motd_fragment";
 
     /**
      * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
@@ -97,8 +109,7 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.a_main);
-        setSupportActionBar(findViewById(R.id.toolbar));
-
+        setupActionBar();
         navigationDrawerFragment = (NavigationDrawerFragment)
                 getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
 
@@ -127,7 +138,6 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
                 newFragment.setArguments(bundle);
             }
             fragmentManagerEnhanced.replace(R.id.main_container, newFragment, MainActivity.TAG);
-            hideActionBarSubTitle();
         } else {
             super.onBackPressed();
         }
@@ -155,11 +165,20 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
                 }
                 bundle.putParcelable(PROVIDER_KEY, provider);
                 fragment.setArguments(bundle);
-                hideActionBarSubTitle();
+                showActionBar();
+                break;
+            case ACTION_SHOW_MOTD_FRAGMENT:
+                fragment = new MotdFragment();
+                Bundle motdBundle = new Bundle();
+                if (intent.hasExtra(EXTRA_MOTD_MSG)) {
+                    motdBundle.putString(EXTRA_MOTD_MSG, intent.getStringExtra(EXTRA_MOTD_MSG));
+                }
+                fragment.setArguments(motdBundle);
+                hideActionBar();
                 break;
             case ACTION_SHOW_LOG_FRAGMENT:
                 fragment = new LogFragment();
-                setActionBarTitle(R.string.log_fragment_title);
+                showActionBar();
                 break;
             case ACTION_SHOW_DIALOG_FRAGMENT:
                 if (intent.hasExtra(EIP.ERRORID)) {
@@ -181,18 +200,45 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
         }
     }
 
-    private void hideActionBarSubTitle() {
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.setSubtitle(null);
+    private void setupActionBar() {
+        setSupportActionBar(findViewById(R.id.toolbar));
+        final ActionBar actionBar = getSupportActionBar();
+        Context context = actionBar.getThemedContext();
+        actionBar.setDisplayOptions(DISPLAY_SHOW_CUSTOM);
+
+        ActionBarTitle actionBarTitle = new ActionBarTitle(context);
+        actionBarTitle.setTitleCaps(BuildConfig.actionbar_capitalize_title);
+        actionBarTitle.setTitle(getString(R.string.app_name));
+
+        @ColorInt int titleColor = ContextCompat.getColor(context, R.color.colorActionBarTitleFont);
+        actionBarTitle.setTitleTextColor(titleColor);
+
+        actionBarTitle.setCentered(BuildConfig.actionbar_center_title);
+        if (BuildConfig.actionbar_center_title) {
+            ActionBar.LayoutParams params = new ActionBar.LayoutParams(
+                    ActionBar.LayoutParams.WRAP_CONTENT,
+                    ActionBar.LayoutParams.MATCH_PARENT,
+                    Gravity.CENTER);
+            actionBar.setCustomView(actionBarTitle, params);
+        } else {
+            actionBar.setCustomView(actionBarTitle);
         }
     }
-    private void setActionBarTitle(@StringRes int stringId) {
+
+    private void hideActionBar() {
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
-            actionBar.setSubtitle(stringId);
+            actionBar.hide();
         }
     }
+
+    private void showActionBar() {
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.show();
+        }
+    }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -236,7 +282,6 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
         fragment.setArguments(arguments);
         new FragmentManagerEnhanced(getSupportFragmentManager())
                 .replace(R.id.main_container, fragment, MainActivity.TAG);
-        hideActionBarSubTitle();
     }
 
     @Override
@@ -303,6 +348,19 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
                     askUserToLogIn(getString(vpn_certificate_user_message));
                 }
                 break;
+            case TOR_TIMEOUT:
+            case TOR_EXCEPTION:
+                try {
+                    Bundle resultData = intent.getParcelableExtra(BROADCAST_RESULT_KEY);
+                    JSONObject jsonObject = new JSONObject(resultData.getString(ProviderAPI.ERRORS));
+                    String initialAction = jsonObject.optString(ProviderAPI.INITIAL_ACTION);
+                    if (UPDATE_INVALID_VPN_CERTIFICATE.equals(initialAction)) {
+                        showMainActivityErrorDialog(getString(downloading_vpn_certificate_failed));
+                    }
+                } catch (Exception e) {
+                    //ignore
+                }
+                break;
         }
     }
 
@@ -327,7 +385,6 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
                 JSONObject errorJson = new JSONObject(reasonToFail);
                 newFragment = MainActivityErrorDialog.newInstance(provider, errorJson);
             } catch (JSONException e) {
-                e.printStackTrace();
                 newFragment = MainActivityErrorDialog.newInstance(provider, reasonToFail);
             }
             newFragment.show(fragmentTransaction, MainActivityErrorDialog.TAG);
