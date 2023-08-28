@@ -1,2 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources></resources>
+<resources>
+    <string name="donate_message_calyx">Calyx VPN 是一个来自Calyx Institute的简单，快速和安全的VPN服务，你可以在https://calyxinstitute.org了解更多或者捐赠。</string>
+    <string name="terms_of_service_calyx">您使用这个应用程序代表您同意服务条款，服务条款可在https://calyxinstitute.org/legal/terms-of-service查看，该服务按原样提供，不提供任何保证，面向致力于让世界变得更美好的人们。</string>
+</resources>
