@@ -1,26 +1,35 @@
 package se.leap.bitmaskclient.base.utils;
 
+import static android.view.View.GONE;
+import static android.view.View.VISIBLE;
+
+import android.animation.Animator;
+import android.animation.ValueAnimator;
 import android.app.Activity;
-import android.app.Notification;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
-import android.os.Build;
+import android.graphics.drawable.Drawable;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 
 import androidx.annotation.ColorRes;
 import androidx.annotation.DimenRes;
+import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.AppCompatTextView;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.fragment.app.Fragment;
 
 import se.leap.bitmaskclient.R;
@@ -112,6 +121,12 @@ public class ViewHelper {
         if (customView instanceof ActionBarTitle) {
             ActionBarTitle actionBarTitle = (ActionBarTitle) customView;
             actionBarTitle.setTitleTextColor(ContextCompat.getColor(bar.getThemedContext(), actionBarTextColor));
+            actionBarTitle.setSubtitleTextColor(ContextCompat.getColor(bar.getThemedContext(), actionBarTextColor));
+        }
+
+        Toolbar tb = activity.findViewById(R.id.toolbar);
+        if (tb != null && tb.getOverflowIcon() != null) {
+            tb.getOverflowIcon().setTint(ContextCompat.getColor(bar.getThemedContext(), actionBarTextColor));
         }
     }
 
@@ -135,6 +150,17 @@ public class ViewHelper {
         return rtnValue;
     }
 
+    public static void tintMenuIcons(Context context, Menu menu, @ColorRes int color) {
+        for (int i = 0; i < menu.size(); i++) {
+            MenuItem item = menu.getItem(i);
+            Drawable normalDrawable = item.getIcon();
+            Drawable wrapDrawable = DrawableCompat.wrap(normalDrawable);
+            DrawableCompat.setTint(wrapDrawable, context.getResources().getColor(color));
+
+            item.setIcon(wrapDrawable);
+        }
+    }
+
     public static void setActionBarTextColor(ActionBar bar, @ColorRes int titleColor) {
         CharSequence titleCharSequence = bar.getTitle();
         if (titleCharSequence == null || titleCharSequence.length() == 0) {
@@ -144,6 +170,67 @@ public class ViewHelper {
         Spannable spannableTitle = new SpannableString(title);
         spannableTitle.setSpan(new ForegroundColorSpan(ContextCompat.getColor(bar.getThemedContext(), titleColor)), 0, spannableTitle.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         bar.setTitle(spannableTitle);
+    }
+
+    public interface AnimationInterface {
+        void onAnimationEnd();
+    }
+
+    public static void animateContainerVisibility(View container, boolean isExpanded) {
+        animateContainerVisibility(container, isExpanded, null);
+    }
+
+        public static void animateContainerVisibility(View container, boolean isExpanded, AnimationInterface animationInterface) {
+
+        int widthMeasureSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+        int heightMeasureSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+
+        container.measure(widthMeasureSpec, heightMeasureSpec);
+        int measuredHeight = container.getMeasuredHeight();
+
+        int targetHeight = isExpanded ? 0 : measuredHeight; // Get the actual content height of the view
+        int initialHeight = isExpanded ? measuredHeight : 0;
+
+        ValueAnimator animator = ValueAnimator.ofInt(initialHeight, targetHeight);
+        animator.setDuration(250); // Set the duration of the animation in milliseconds
+
+        animator.addUpdateListener(animation -> {
+            container.getLayoutParams().height = (int) animation.getAnimatedValue();
+            container.requestLayout();
+        });
+        animator.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(@NonNull Animator animation) {
+                if (initialHeight == 0 && container.getVisibility() == GONE) {
+                    container.setVisibility(VISIBLE);
+                }
+            }
+
+            @Override
+            public void onAnimationEnd(@NonNull Animator animation) {
+                if (targetHeight == 0) {
+                    container.setVisibility(GONE);
+                }
+                if (animationInterface != null) {
+                    animationInterface.onAnimationEnd();
+                }
+            }
+
+            @Override
+            public void onAnimationCancel(@NonNull Animator animation) {
+                container.setVisibility(targetHeight == 0 ? GONE : VISIBLE);
+            }
+
+            @Override
+            public void onAnimationRepeat(@NonNull Animator animation) {}
+        });
+
+        animator.start();
+    }
+
+    public static void hideKeyboardFrom(Context context, View view) {
+        InputMethodManager imm = (InputMethodManager) context.getSystemService(Activity.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
     }
 
 }

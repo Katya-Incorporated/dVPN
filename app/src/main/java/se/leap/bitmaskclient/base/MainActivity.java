@@ -19,7 +19,6 @@ package se.leap.bitmaskclient.base;
 
 import static androidx.appcompat.app.ActionBar.DISPLAY_SHOW_CUSTOM;
 import static se.leap.bitmaskclient.R.string.downloading_vpn_certificate_failed;
-import static se.leap.bitmaskclient.R.string.vpn_certificate_user_message;
 import static se.leap.bitmaskclient.base.models.Constants.ASK_TO_CANCEL_VPN;
 import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_CODE;
 import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_KEY;
@@ -33,8 +32,6 @@ import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
 import static se.leap.bitmaskclient.base.models.Constants.REQUEST_CODE_CONFIGURE_LEAP;
 import static se.leap.bitmaskclient.base.models.Constants.REQUEST_CODE_LOG_IN;
 import static se.leap.bitmaskclient.base.models.Constants.REQUEST_CODE_SWITCH_PROVIDER;
-import static se.leap.bitmaskclient.base.models.Constants.SHARED_PREFERENCES;
-import static se.leap.bitmaskclient.base.utils.PreferenceHelper.storeProviderInPreferences;
 import static se.leap.bitmaskclient.eip.EIP.EIPErrors.ERROR_INVALID_VPN_CERTIFICATE;
 import static se.leap.bitmaskclient.eip.EIP.EIPErrors.ERROR_VPN_PREPARE;
 import static se.leap.bitmaskclient.providersetup.ProviderAPI.ERRORID;
@@ -44,11 +41,9 @@ import static se.leap.bitmaskclient.providersetup.ProviderAPI.INCORRECTLY_UPDATE
 import static se.leap.bitmaskclient.providersetup.ProviderAPI.TOR_EXCEPTION;
 import static se.leap.bitmaskclient.providersetup.ProviderAPI.TOR_TIMEOUT;
 import static se.leap.bitmaskclient.providersetup.ProviderAPI.UPDATE_INVALID_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.USER_MESSAGE;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
@@ -64,14 +59,13 @@ import androidx.fragment.app.FragmentTransaction;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Observable;
-import java.util.Observer;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 
 import se.leap.bitmaskclient.BuildConfig;
 import se.leap.bitmaskclient.R;
 import se.leap.bitmaskclient.base.fragments.EipFragment;
 import se.leap.bitmaskclient.base.fragments.ExcludeAppsFragment;
-import se.leap.bitmaskclient.base.fragments.LogFragment;
 import se.leap.bitmaskclient.base.fragments.MainActivityErrorDialog;
 import se.leap.bitmaskclient.base.fragments.MotdFragment;
 import se.leap.bitmaskclient.base.fragments.NavigationDrawerFragment;
@@ -85,19 +79,15 @@ import se.leap.bitmaskclient.eip.EipCommand;
 import se.leap.bitmaskclient.eip.EipSetupListener;
 import se.leap.bitmaskclient.eip.EipSetupObserver;
 import se.leap.bitmaskclient.providersetup.ProviderAPI;
-import se.leap.bitmaskclient.providersetup.activities.LoginActivity;
-import se.leap.bitmaskclient.providersetup.models.LeapSRPSession;
 
-public class MainActivity extends AppCompatActivity implements EipSetupListener, Observer {
+public class MainActivity extends AppCompatActivity implements EipSetupListener, PropertyChangeListener {
 
     public final static String TAG = MainActivity.class.getSimpleName();
 
     private Provider provider;
-    private SharedPreferences preferences;
     private NavigationDrawerFragment navigationDrawerFragment;
 
     public final static String ACTION_SHOW_VPN_FRAGMENT = "action_show_vpn_fragment";
-    public final static String ACTION_SHOW_LOG_FRAGMENT = "action_show_log_fragment";
     public final static String ACTION_SHOW_DIALOG_FRAGMENT = "action_show_dialog_fragment";
     public final static String ACTION_SHOW_MOTD_FRAGMENT = "action_show_motd_fragment";
 
@@ -113,7 +103,6 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
         navigationDrawerFragment = (NavigationDrawerFragment)
                 getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
 
-        preferences = getSharedPreferences(SHARED_PREFERENCES, MODE_PRIVATE);
         provider = ProviderObservable.getInstance().getCurrentProvider();
 
         EipSetupObserver.addListener(this);
@@ -155,6 +144,7 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
             return;
         }
 
+        @ColorInt int tintColor;
         Fragment fragment = null;
         switch (intent.getAction()) {
             case ACTION_SHOW_VPN_FRAGMENT:
@@ -166,6 +156,8 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
                 bundle.putParcelable(PROVIDER_KEY, provider);
                 fragment.setArguments(bundle);
                 showActionBar();
+                int color = ((ActionBarTitle) getSupportActionBar().getCustomView()).getTitleTextColor();
+                setActionBarToggleColor(color);
                 break;
             case ACTION_SHOW_MOTD_FRAGMENT:
                 fragment = new MotdFragment();
@@ -175,10 +167,6 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
                 }
                 fragment.setArguments(motdBundle);
                 hideActionBar();
-                break;
-            case ACTION_SHOW_LOG_FRAGMENT:
-                fragment = new LogFragment();
-                showActionBar();
                 break;
             case ACTION_SHOW_DIALOG_FRAGMENT:
                 if (intent.hasExtra(EIP.ERRORID)) {
@@ -212,6 +200,7 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
 
         @ColorInt int titleColor = ContextCompat.getColor(context, R.color.colorActionBarTitleFont);
         actionBarTitle.setTitleTextColor(titleColor);
+        actionBarTitle.setSubtitleTextColor(titleColor);
 
         actionBarTitle.setCentered(BuildConfig.actionbar_center_title);
         if (BuildConfig.actionbar_center_title) {
@@ -223,6 +212,10 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
         } else {
             actionBar.setCustomView(actionBarTitle);
         }
+    }
+
+    public void setActionBarToggleColor(int color) {
+        navigationDrawerFragment.setDrawerToggleColor(this, color);
     }
 
     private void hideActionBar() {
@@ -254,10 +247,10 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
                 return;
             }
 
-            storeProviderInPreferences(preferences, provider);
+            PreferenceHelper.storeProviderInPreferences(provider);
             ProviderObservable.getInstance().updateProvider(provider);
             if (!provider.supportsPluggableTransports()) {
-                PreferenceHelper.useBridges(this, false);
+                PreferenceHelper.useBridges(false);
             }
             navigationDrawerFragment.refresh();
 
@@ -311,10 +304,10 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
                         return;
                     }
 
-                    if (LeapSRPSession.loggedIn() || provider.allowsAnonymous()) {
+                    if (provider.allowsAnonymous()) {
                         showMainActivityErrorDialog(error);
                     } else if (isInvalidCertificateForLoginOnlyProvider(error)) {
-                        askUserToLogIn(getString(vpn_certificate_user_message));
+                        showMainActivityErrorDialog(getString(R.string.login_not_supported));
                     }
                 }
                 break;
@@ -342,11 +335,7 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
                 // TODO CATCH ME IF YOU CAN - WHAT DO WE WANT TO DO?
                 break;
             case INCORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE:
-                if (LeapSRPSession.loggedIn() || provider.allowsAnonymous()) {
                     showMainActivityErrorDialog(getString(downloading_vpn_certificate_failed));
-                } else {
-                    askUserToLogIn(getString(vpn_certificate_user_message));
-                }
                 break;
             case TOR_TIMEOUT:
             case TOR_EXCEPTION:
@@ -365,9 +354,9 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
     }
 
     @Override
-    public void update(Observable o, Object arg) {
-        if (o instanceof ProviderObservable) {
-            this.provider = ((ProviderObservable) o).getCurrentProvider();
+    public void propertyChange(PropertyChangeEvent evt) {
+        if (ProviderObservable.PROPERTY_CHANGE.equals(evt.getPropertyName())) {
+            this.provider = (Provider) evt.getNewValue();
         }
     }
 
@@ -430,20 +419,11 @@ public class MainActivity extends AppCompatActivity implements EipSetupListener,
         try {
             JSONObject errorJson = new JSONObject(errorJsonString);
             return  ERROR_INVALID_VPN_CERTIFICATE.toString().equals(errorJson.getString(ERRORID)) &&
-                    !LeapSRPSession.loggedIn() &&
+                    provider.allowsRegistered() &&
                     !provider.allowsAnonymous();
         } catch (JSONException e) {
             e.printStackTrace();
         }
         return false;
-    }
-
-    private void askUserToLogIn(String userMessage) {
-        Intent intent = new Intent(this, LoginActivity.class);
-        intent.putExtra(PROVIDER_KEY, provider);
-        if (userMessage != null) {
-            intent.putExtra(USER_MESSAGE, userMessage);
-        }
-        startActivityForResult(intent, REQUEST_CODE_LOG_IN);
     }
 }

@@ -9,7 +9,7 @@ import static de.blinkt.openvpn.core.ConnectionStatus.LEVEL_CONNECTED;
 import static de.blinkt.openvpn.core.ConnectionStatus.LEVEL_WAITING_FOR_USER_INPUT;
 import static de.blinkt.openvpn.core.NetworkSpace.IpAddress;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_PROFILE;
-import static se.leap.bitmaskclient.base.utils.ConfigHelper.ObfsVpnHelper.useObfsVpn;
+import static se.leap.bitmaskclient.base.utils.BuildConfigHelper.useObfsVpn;
 
 import android.Manifest.permission;
 import android.app.Notification;
@@ -277,6 +277,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         // Always show notification here to avoid problem with startForeground timeout
         notificationManager.createOpenVpnNotificationChannel();
         notificationManager.buildForegroundServiceNotification(EipStatus.getInstance().getLevel(), this::onNotificationBuild);
+        notificationManager.cancelVoidVpnServiceNotifications();
     }
 
     @Override
@@ -329,13 +330,13 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                 updateShortCutUsage(mProfile);
             }
             VpnStatus.setAlwaysOn(false);
-
+            notificationManager.cancelVoidVpnServiceNotifications();
         } else {
             /* The intent is null when we are set as always-on or the service has been restarted. */
             Log.d(TAG, "Starting VPN due to isAlwaysOn system settings or app crash.");
             startWithForegroundNotification();
 
-            mProfile = VpnStatus.getLastConnectedVpnProfile(this);
+            mProfile = VpnStatus.getLastConnectedVpnProfile();
             VpnStatus.logInfo(R.string.service_restarted);
 
             if (mProfile != null) {
@@ -357,7 +358,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         /* start the OpenVPN process itself in a background thread */
         new Thread(this::startOpenVPN).start();
 
-        VpnStatus.setLastConnectedVpnProfile(getApplicationContext(), mProfile);
+        VpnStatus.setLastConnectedVpnProfile(mProfile);
 
         return START_STICKY;
     }

@@ -16,6 +16,16 @@
  */
 package se.leap.bitmaskclient.base.fragments;
 
+import static android.view.View.GONE;
+import static android.view.View.VISIBLE;
+import static de.blinkt.openvpn.core.connection.Connection.TransportType.OPENVPN;
+import static de.blinkt.openvpn.core.connection.Connection.TransportType.PT;
+import static se.leap.bitmaskclient.base.MainActivity.ACTION_SHOW_VPN_FRAGMENT;
+import static se.leap.bitmaskclient.base.models.Constants.USE_BRIDGES;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getUseBridges;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.useBridges;
+import static se.leap.bitmaskclient.base.utils.ViewHelper.setActionBarSubtitle;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -29,10 +39,13 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatTextView;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.Observable;
@@ -49,23 +62,11 @@ import se.leap.bitmaskclient.eip.EipCommand;
 import se.leap.bitmaskclient.eip.EipStatus;
 import se.leap.bitmaskclient.eip.GatewaysManager;
 
-import static android.content.Context.MODE_PRIVATE;
-import static android.view.View.GONE;
-import static android.view.View.VISIBLE;
-import static de.blinkt.openvpn.core.connection.Connection.TransportType.OPENVPN;
-import static de.blinkt.openvpn.core.connection.Connection.TransportType.PT;
-import static se.leap.bitmaskclient.base.MainActivity.ACTION_SHOW_VPN_FRAGMENT;
-import static se.leap.bitmaskclient.base.models.Constants.SHARED_PREFERENCES;
-import static se.leap.bitmaskclient.base.models.Constants.USE_BRIDGES;
-import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getUseBridges;
-import static se.leap.bitmaskclient.base.utils.PreferenceHelper.useBridges;
-import static se.leap.bitmaskclient.base.utils.ViewHelper.setActionBarSubtitle;
-
 interface LocationListSelectionListener {
     void onLocationManuallySelected(Location location);
 }
 
-public class GatewaySelectionFragment extends Fragment implements Observer, LocationListSelectionListener, SharedPreferences.OnSharedPreferenceChangeListener {
+public class GatewaySelectionFragment extends Fragment implements PropertyChangeListener, LocationListSelectionListener, SharedPreferences.OnSharedPreferenceChangeListener {
 
     private static final String TAG = GatewaySelectionFragment.class.getSimpleName();
 
@@ -75,7 +76,6 @@ public class GatewaySelectionFragment extends Fragment implements Observer, Loca
     private SelectLocationEntry recommendedLocation;
     private GatewaysManager gatewaysManager;
     private EipStatus eipStatus;
-    private SharedPreferences preferences;
     private Connection.TransportType selectedTransport;
     private AppCompatTextView bridgesHint;
     private AppCompatTextView disableBridges;
@@ -89,15 +89,14 @@ public class GatewaySelectionFragment extends Fragment implements Observer, Loca
         super.onCreate(savedInstanceState);
         gatewaysManager = new GatewaysManager(getContext());
         eipStatus = EipStatus.getInstance();
-        preferences = getContext().getSharedPreferences(SHARED_PREFERENCES, MODE_PRIVATE);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        selectedTransport = getUseBridges(preferences) ? PT : OPENVPN;
-        preferences.registerOnSharedPreferenceChangeListener(this);
+        selectedTransport = getUseBridges() ? PT : OPENVPN;
+        PreferenceHelper.registerOnSharedPreferenceChangeListener(this);
         eipStatus.addObserver(this);
         return inflater.inflate(R.layout.f_gateway_selection, container, false);
     }
@@ -109,13 +108,17 @@ public class GatewaySelectionFragment extends Fragment implements Observer, Loca
         initRecommendedLocationEntry();
         initBridgesHint(view);
         setActionBarSubtitle(this, R.string.gateway_selection_title);
+        Activity activity = getActivity();
+        if (activity != null) {
+            ((MainActivity) activity).setActionBarToggleColor(ContextCompat.getColor(activity, R.color.colorActionBarTitleFont));
+        }
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         eipStatus.deleteObserver(this);
-        preferences.unregisterOnSharedPreferenceChangeListener(this);
+        PreferenceHelper.unregisterOnSharedPreferenceChangeListener(this);
     }
 
     private void initRecyclerView() {
@@ -142,17 +145,17 @@ public class GatewaySelectionFragment extends Fragment implements Observer, Loca
 
     private void initBridgesHint(@NonNull View view) {
         bridgesHint = view.findViewById(R.id.manual_subtitle);
-        bridgesHint.setVisibility(getUseBridges(getContext()) ? VISIBLE : GONE);
+        bridgesHint.setVisibility(getUseBridges() ? VISIBLE : GONE);
         disableBridges = view.findViewById(R.id.disable_bridges);
-        disableBridges.setVisibility(getUseBridges(getContext()) ? VISIBLE : GONE);
+        disableBridges.setVisibility(getUseBridges() ? VISIBLE : GONE);
         disableBridges.setOnClickListener(v -> {
-            useBridges(getContext(), false);
+            useBridges(false);
         });
     }
 
     private void updateRecommendedLocation() {
         Location location = new Location();
-        boolean isManualSelection = PreferenceHelper.getPreferredCity(getContext()) != null;
+        boolean isManualSelection = PreferenceHelper.getPreferredCity() != null;
         if (!isManualSelection && eipStatus.isConnected()) {
             try {
                 location = gatewaysManager.getLocation(VpnStatus.getCurrentlyConnectingVpnName()).clone();
@@ -173,7 +176,7 @@ public class GatewaySelectionFragment extends Fragment implements Observer, Loca
             if (context == null) {
                 return;
             }
-            PreferenceHelper.setPreferredCity(context, preferredCity);
+            PreferenceHelper.setPreferredCity(preferredCity);
             EipCommand.startVPN(context, false);
             try {
                 Intent intent = new Intent(context, MainActivity.class);
@@ -196,9 +199,9 @@ public class GatewaySelectionFragment extends Fragment implements Observer, Loca
     }
 
     @Override
-    public void update(Observable o, Object arg) {
-        if (o instanceof EipStatus) {
-            eipStatus = (EipStatus) o;
+    public void propertyChange(PropertyChangeEvent evt) {
+        if (EipStatus.PROPERTY_CHANGE.equals(evt.getPropertyName())) {
+            eipStatus = (EipStatus) evt.getNewValue();
             Activity activity = getActivity();
             if (activity != null) {
                 activity.runOnUiThread(this::updateRecommendedLocation);
@@ -209,7 +212,7 @@ public class GatewaySelectionFragment extends Fragment implements Observer, Loca
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         if (key.equals(USE_BRIDGES)) {
-            boolean showBridges = getUseBridges(sharedPreferences);
+            boolean showBridges = getUseBridges();
             selectedTransport = showBridges ? PT : OPENVPN;
             gatewaysManager.updateTransport(selectedTransport);
             locationListAdapter.updateTransport(selectedTransport, gatewaysManager);

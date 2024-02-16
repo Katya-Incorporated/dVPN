@@ -15,7 +15,7 @@ import androidx.appcompat.app.AppCompatDialogFragment;
 import androidx.appcompat.widget.AppCompatButton;
 import androidx.appcompat.widget.AppCompatEditText;
 
-import se.leap.bitmaskclient.base.utils.ConfigHelper.ObfsVpnHelper;
+import se.leap.bitmaskclient.base.utils.BuildConfigHelper;
 import se.leap.bitmaskclient.base.utils.PreferenceHelper;
 import se.leap.bitmaskclient.base.views.IconSwitchEntry;
 import se.leap.bitmaskclient.databinding.DObfuscationProxyBinding;
@@ -48,38 +48,37 @@ public class ObfuscationProxyDialog extends AppCompatDialogFragment {
         cancelButton = binding.buttonCancel;
         kcpSwitch = binding.kcpSwitch;
 
-        ipField.setText(PreferenceHelper.getObfuscationPinningIP(getContext()));
-        portField.setText(PreferenceHelper.getObfuscationPinningPort(getContext()));
-        certificateField.setText(PreferenceHelper.getObfuscationPinningCert(getContext()));
-        kcpSwitch.setChecked(PreferenceHelper.getObfuscationPinningKCP(getContext()));
+        ipField.setText(PreferenceHelper.getObfuscationPinningIP());
+        portField.setText(PreferenceHelper.getObfuscationPinningPort());
+        certificateField.setText(PreferenceHelper.getObfuscationPinningCert());
+        kcpSwitch.setChecked(PreferenceHelper.getObfuscationPinningKCP());
 
         GatewaysManager gatewaysManager = new GatewaysManager(getContext());
 
         saveButton.setOnClickListener(v -> {
             String ip = TextUtils.isEmpty(ipField.getText()) ? null : ipField.getText().toString();
-            PreferenceHelper.setObfuscationPinningIP(v.getContext(), ip);
+            PreferenceHelper.setObfuscationPinningIP(ip);
             String port = TextUtils.isEmpty(portField.getText()) ? null : portField.getText().toString();
-            PreferenceHelper.setObfuscationPinningPort(v.getContext(), port);
+            PreferenceHelper.setObfuscationPinningPort(port);
             String cert = TextUtils.isEmpty(certificateField.getText()) ? null : certificateField.getText().toString();
-            PreferenceHelper.setObfuscationPinningCert(v.getContext(), cert);
-            PreferenceHelper.setObfuscationPinningKCP(v.getContext(), kcpSwitch.isChecked());
-            PreferenceHelper.setUseObfuscationPinning(v.getContext(), ip != null && port != null && cert != null);
-            PreferenceHelper.setObfuscationPinningGatewayLocation(v.getContext(), gatewaysManager.getLocationNameForIP(ip, v.getContext()));
+            PreferenceHelper.setObfuscationPinningCert(cert);
+            PreferenceHelper.setObfuscationPinningKCP(kcpSwitch.isChecked());
+            PreferenceHelper.setUseObfuscationPinning(ip != null && port != null && cert != null);
+            PreferenceHelper.setObfuscationPinningGatewayLocation(gatewaysManager.getLocationNameForIP(ip, v.getContext()));
             dismiss();
         });
 
-        useDefaultsButton.setVisibility(ObfsVpnHelper.hasObfuscationPinningDefaults() ? VISIBLE : GONE);
+        useDefaultsButton.setVisibility(BuildConfigHelper.hasObfuscationPinningDefaults() ? VISIBLE : GONE);
         useDefaultsButton.setOnClickListener(v -> {
-           ipField.setText(ObfsVpnHelper.obfsvpnIP());
-           portField.setText(ObfsVpnHelper.obfsvpnPort());
-           certificateField.setText(ObfsVpnHelper.obfsvpnCert());
-           kcpSwitch.setChecked(ObfsVpnHelper.useKcp());
+           ipField.setText(BuildConfigHelper.obfsvpnIP());
+           portField.setText(BuildConfigHelper.obfsvpnPort());
+           certificateField.setText(BuildConfigHelper.obfsvpnCert());
+           kcpSwitch.setChecked(BuildConfigHelper.useKcp());
         });
 
         cancelButton.setOnClickListener(v -> {
             boolean allowPinning = !TextUtils.isEmpty(ipField.getText()) && !TextUtils.isEmpty(portField.getText()) && !TextUtils.isEmpty(certificateField.getText());
-            PreferenceHelper.setUseObfuscationPinning(
-                    v.getContext(), allowPinning);
+            PreferenceHelper.setUseObfuscationPinning(allowPinning);
             dismiss();
         });
 

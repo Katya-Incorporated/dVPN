@@ -19,22 +19,19 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDialogFragment;
-import androidx.appcompat.widget.AppCompatTextView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.Observable;
-import java.util.Observer;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import butterknife.BindView;
-import butterknife.ButterKnife;
-import butterknife.Unbinder;
 import de.blinkt.openvpn.core.VpnStatus;
 import se.leap.bitmaskclient.R;
 import se.leap.bitmaskclient.base.utils.PreferenceHelper;
 import se.leap.bitmaskclient.base.views.IconCheckboxEntry;
+import se.leap.bitmaskclient.databinding.DListSelectionBinding;
 import se.leap.bitmaskclient.firewall.FirewallManager;
 import se.leap.bitmaskclient.tethering.TetheringObservable;
 
@@ -55,21 +52,12 @@ import se.leap.bitmaskclient.tethering.TetheringObservable;
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-public class TetheringDialog extends AppCompatDialogFragment implements Observer {
+public class TetheringDialog extends AppCompatDialogFragment implements PropertyChangeListener {
 
     public final static String TAG = TetheringDialog.class.getName();
 
-    @BindView(R.id.tvTitle)
-    AppCompatTextView title;
-
-    @BindView(R.id.user_message)
-    AppCompatTextView userMessage;
-
-    @BindView(R.id.selection_list_view)
-    RecyclerView selectionListView;
     DialogListAdapter adapter;
     private DialogListAdapter.ViewModel[] dataset;
-    private Unbinder unbinder;
 
     public static class DialogListAdapter extends RecyclerView.Adapter<DialogListAdapter.ViewHolder> {
 
@@ -139,25 +127,23 @@ public class TetheringDialog extends AppCompatDialogFragment implements Observer
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         LayoutInflater inflater = getActivity().getLayoutInflater();
-        View view = inflater.inflate(R.layout.d_list_selection, null);
-        unbinder = ButterKnife.bind(this, view);
+        DListSelectionBinding binding = DListSelectionBinding.inflate(inflater);
 
-        title.setText(R.string.tethering);
-        userMessage.setMovementMethod(LinkMovementMethod.getInstance());
-        userMessage.setLinkTextColor(getContext().getResources().getColor(R.color.colorPrimary));
-        userMessage.setText(createUserMessage());
+        binding.tvTitle.setText(R.string.tethering);
+        binding.userMessage.setMovementMethod(LinkMovementMethod.getInstance());
+        binding.userMessage.setLinkTextColor(getContext().getResources().getColor(R.color.colorPrimary));
+        binding.userMessage.setText(createUserMessage());
 
         initDataset();
         adapter = new DialogListAdapter(dataset, this::onItemClick);
-        selectionListView.setAdapter(adapter);
-        selectionListView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        binding.selectionListView.setAdapter(adapter);
+        binding.selectionListView.setLayoutManager(new LinearLayoutManager(getActivity()));
 
-
-        builder.setView(view)
+        builder.setView(binding.getRoot())
                 .setPositiveButton(android.R.string.ok, (dialog, id) -> {
-                    PreferenceHelper.allowWifiTethering(getContext(), dataset[0].checked);
-                    PreferenceHelper.allowUsbTethering(getContext(), dataset[1].checked);
-                    PreferenceHelper.allowBluetoothTethering(getContext(), dataset[2].checked);
+                    PreferenceHelper.allowWifiTethering(dataset[0].checked);
+                    PreferenceHelper.allowUsbTethering(dataset[1].checked);
+                    PreferenceHelper.allowBluetoothTethering(dataset[2].checked);
                     TetheringObservable.allowVpnWifiTethering(dataset[0].checked);
                     TetheringObservable.allowVpnUsbTethering(dataset[1].checked);
                     TetheringObservable.allowVpnBluetoothTethering(dataset[2].checked);
@@ -188,12 +174,6 @@ public class TetheringDialog extends AppCompatDialogFragment implements Observer
     public void onPause() {
         super.onPause();
         TetheringObservable.getInstance().deleteObserver(this);
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        unbinder.unbind();
     }
 
     public void onItemClick(DialogListAdapter.ViewModel item) {
@@ -247,23 +227,23 @@ public class TetheringDialog extends AppCompatDialogFragment implements Observer
         dataset = new DialogListAdapter.ViewModel[] {
                 new DialogListAdapter.ViewModel(getContext().getResources().getDrawable(R.drawable.ic_wifi),
                         getContext().getString(R.string.tethering_wifi),
-                        PreferenceHelper.isWifiTetheringAllowed(getContext()),
+                        PreferenceHelper.isWifiTetheringAllowed(),
                         TetheringObservable.getInstance().isWifiTetheringEnabled()),
                 new DialogListAdapter.ViewModel(getContext().getResources().getDrawable(R.drawable.ic_usb),
                         getContext().getString(R.string.tethering_usb),
-                        PreferenceHelper.isUsbTetheringAllowed(getContext()),
+                        PreferenceHelper.isUsbTetheringAllowed(),
                         TetheringObservable.getInstance().isUsbTetheringEnabled()),
                 new DialogListAdapter.ViewModel(getContext().getResources().getDrawable(R.drawable.ic_bluetooth),
                         getContext().getString(R.string.tethering_bluetooth),
-                        PreferenceHelper.isBluetoothTetheringAllowed(getContext()),
+                        PreferenceHelper.isBluetoothTetheringAllowed(),
                         TetheringObservable.getInstance().isUsbTetheringEnabled())
         };
     }
 
     @Override
-    public void update(Observable o, Object arg) {
-        if (o instanceof TetheringObservable) {
-            TetheringObservable observable = (TetheringObservable) o;
+    public void propertyChange(PropertyChangeEvent evt) {
+        if (TetheringObservable.PROPERTY_CHANGE.equals(evt.getPropertyName())) {
+            TetheringObservable observable = (TetheringObservable) evt.getNewValue();
             Log.d(TAG, "TetheringObservable is updated");
             dataset[0].enabled = observable.isWifiTetheringEnabled();
             dataset[1].enabled = observable.isUsbTetheringEnabled();
@@ -271,5 +251,4 @@ public class TetheringDialog extends AppCompatDialogFragment implements Observer
             adapter.notifyDataSetChanged();
         }
     }
-
 }

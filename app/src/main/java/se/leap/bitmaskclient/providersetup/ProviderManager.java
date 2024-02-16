@@ -19,8 +19,6 @@ import android.content.res.AssetManager;
 
 import androidx.annotation.VisibleForTesting;
 
-import com.pedrogomez.renderers.AdapteeCollection;
-
 import org.json.JSONObject;
 
 import java.io.File;
@@ -39,9 +37,9 @@ import se.leap.bitmaskclient.base.models.Provider;
 /**
  * Created by parmegv on 4/12/14.
  */
-public class ProviderManager implements AdapteeCollection<Provider> {
+public class ProviderManager {
 
-    private AssetManager assetsManager;
+    private final AssetManager assetsManager;
     private File externalFilesDir;
     private Set<Provider> defaultProviders;
     private Set<Provider> customProviders;
@@ -49,6 +47,7 @@ public class ProviderManager implements AdapteeCollection<Provider> {
     private Set<String> customProviderURLs;
 
     private static ProviderManager instance;
+    private boolean addDummyEntry = false;
 
     public static ProviderManager getInstance(AssetManager assetsManager, File externalFilesDir) {
         if (instance == null)
@@ -62,15 +61,19 @@ public class ProviderManager implements AdapteeCollection<Provider> {
         instance = null;
     }
 
+    public void setAddDummyEntry(boolean addDummyEntry) {
+        this.addDummyEntry = addDummyEntry;
+    }
+
     private ProviderManager(AssetManager assetManager, File externalFilesDir) {
         this.assetsManager = assetManager;
         addDefaultProviders(assetManager);
         addCustomProviders(externalFilesDir);
     }
 
-    private void addDefaultProviders(AssetManager assets_manager) {
+    private void addDefaultProviders(AssetManager assetManager) {
         try {
-            defaultProviders = providersFromAssets(URLS, assets_manager.list(URLS));
+            defaultProviders = providersFromAssets(URLS, assetManager.list(URLS));
             defaultProviderURLs = getProviderUrlSetFromProviderSet(defaultProviders);
         } catch (IOException e) {
             e.printStackTrace();
@@ -145,22 +148,25 @@ public class ProviderManager implements AdapteeCollection<Provider> {
     }
 
     public List<Provider> providers() {
+       return providers(addDummyEntry);
+    }
+
+    private List<Provider> providers(boolean addEmptyProvider) {
         List<Provider> allProviders = new ArrayList<>();
         allProviders.addAll(defaultProviders);
         if(customProviders != null)
             allProviders.addAll(customProviders);
-        //add an option to add a custom provider
-        //TODO: refactor me?
-        allProviders.add(new Provider());
+        if (addEmptyProvider) {
+            //add an option to add a custom provider
+            allProviders.add(new Provider());
+        }
         return allProviders;
     }
 
-    @Override
     public int size() {
         return providers().size();
     }
 
-    @Override
     public Provider get(int index) {
         Iterator<Provider> iterator = providers().iterator();
         while (iterator.hasNext() && index > 0) {
@@ -170,7 +176,6 @@ public class ProviderManager implements AdapteeCollection<Provider> {
         return iterator.next();
     }
 
-    @Override
     public boolean add(Provider element) {
         return element != null &&
                 !defaultProviderURLs.contains(element.getMainUrl().toString()) &&
@@ -178,14 +183,12 @@ public class ProviderManager implements AdapteeCollection<Provider> {
                 customProviderURLs.add(element.getMainUrl().toString());
     }
 
-    @Override
     public boolean remove(Object element) {
         return element instanceof Provider &&
                 customProviders.remove(element) &&
                 customProviderURLs.remove(((Provider) element).getMainUrl().toString());
     }
 
-    @Override
     public boolean addAll(Collection<? extends Provider> elements) {
         Iterator iterator = elements.iterator();
         boolean addedAll = true;
@@ -198,7 +201,6 @@ public class ProviderManager implements AdapteeCollection<Provider> {
         return addedAll;
     }
 
-    @Override
     public boolean removeAll(Collection<?> elements) {
         Iterator iterator = elements.iterator();
         boolean removedAll = true;
@@ -216,7 +218,6 @@ public class ProviderManager implements AdapteeCollection<Provider> {
         return removedAll;
     }
 
-    @Override
     public void clear() {
         defaultProviders.clear();
         customProviders.clear();

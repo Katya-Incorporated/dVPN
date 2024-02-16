@@ -19,7 +19,6 @@ package se.leap.bitmaskclient.providersetup;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
@@ -31,11 +30,9 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.util.concurrent.TimeoutException;
 
+import se.leap.bitmaskclient.base.utils.PreferenceHelper;
 import se.leap.bitmaskclient.providersetup.connectivity.OkHttpClientGenerator;
 import se.leap.bitmaskclient.tor.TorServiceCommand;
-import se.leap.bitmaskclient.tor.TorServiceConnection;
-
-import static se.leap.bitmaskclient.base.models.Constants.SHARED_PREFERENCES;
 
 /**
  * Implements HTTP api methods (encapsulated in {{@link ProviderApiManager}})
@@ -55,15 +52,18 @@ public class ProviderAPI extends JobIntentService implements ProviderApiManagerB
      */
     static final int JOB_ID = 161375;
 
+    @Deprecated
+    final public static String
+            UPDATE_PROVIDER_DETAILS = "updateProviderDetails",
+            SIGN_UP = "srpRegister",
+            LOG_IN = "srpAuth",
+            LOG_OUT = "logOut";
+
     final public static String
             TAG = ProviderAPI.class.getSimpleName(),
             SET_UP_PROVIDER = "setUpProvider",
-            UPDATE_PROVIDER_DETAILS = "updateProviderDetails",
             DOWNLOAD_GEOIP_JSON = "downloadGeoIpJson",
             DOWNLOAD_MOTD = "downloadMotd",
-            SIGN_UP = "srpRegister",
-            LOG_IN = "srpAuth",
-            LOG_OUT = "logOut",
             // all vpn certificate download commands are used in different scenarios with different error handling
             // command key used for the initial vpn certificate download during the provider setup
             DOWNLOAD_VPN_CERTIFICATE = "downloadUserAuthedVPNCertificate",
@@ -180,9 +180,8 @@ public class ProviderAPI extends JobIntentService implements ProviderApiManagerB
 
 
     private ProviderApiManager initApiManager() {
-        SharedPreferences preferences = getSharedPreferences(SHARED_PREFERENCES, MODE_PRIVATE);
         OkHttpClientGenerator clientGenerator = new OkHttpClientGenerator(getResources());
-        return new ProviderApiManager(preferences, getResources(), clientGenerator, this);
+        return new ProviderApiManager(getResources(), clientGenerator, this);
     }
 
 }

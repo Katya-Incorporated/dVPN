@@ -5,16 +5,19 @@
   -->
 
 <resources>
-    <bool name="logSildersAlwaysVisible">true</bool>
+    <bool name="logSlidersAlwaysVisible">true</bool>
     <dimen name="bitmask_logo">72dp</dimen>
     <dimen name="bitmask_logo_compact">56dp</dimen>
     <dimen name="stdpadding">16dp</dimen>
     <dimen name="compact_padding">6dp</dimen>
     <dimen name="button_radius">20dp</dimen>
     <!-- landscape dimens -->
-    <dimen name="footer_text_padding">20dp</dimen>
-    <dimen name="splash_text_top_padding">140dp</dimen>
     <dimen name="mainbutton_padding">32dp</dimen>
     <dimen name="donation_reminder_padding">24dp</dimen>
+
+    <dimen name="setup_bottom_bar">75dp</dimen>
+    <dimen name="setup_button_top_padding">10dp</dimen>
+    <dimen name="tor_icon_margin_start">8dp</dimen>
+    <dimen name="snowflake_icon_margin_start">8dp</dimen>
 
 </resources>

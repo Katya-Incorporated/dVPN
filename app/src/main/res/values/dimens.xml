@@ -8,10 +8,8 @@
     <dimen name="stdpadding">8dp</dimen>
     <dimen name="compact_padding">3dp</dimen>
     <dimen name="standard_margin">8dp</dimen>
-    <bool name="logSildersAlwaysVisible">false</bool>
-    <!-- landscape layout dimens -->
-    <dimen name="footer_text_padding">12dp</dimen>
-    <dimen name="splash_text_top_padding">80dp</dimen>
+    <bool name="logSlidersAlwaysVisible">false</bool>
+
 
     <dimen name="diameter">48dp</dimen>
     <dimen name="elevation_low">1dp</dimen>
@@ -44,8 +42,13 @@
 
     <dimen name="toast_bottom_padding">20dp</dimen>
     <dimen name="button_bevel">3dp</dimen>
+    <dimen name="button_bevel_pressed">1dp</dimen>
     <dimen name="button_radius">16dp</dimen>
     <dimen name="mainbutton_padding">8dp</dimen>
     <dimen name="donation_reminder_padding">8dp</dimen>
 
+    <dimen name="setup_bottom_bar">50dp</dimen>
+    <dimen name="setup_button_top_padding">5dp</dimen>
+    <dimen name="tor_icon_margin_start">0dp</dimen>
+    <dimen name="snowflake_icon_margin_start">2dp</dimen>
 </resources>

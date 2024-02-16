@@ -17,7 +17,29 @@
 
 package se.leap.bitmaskclient.providersetup;
 
-import android.content.SharedPreferences;
+import static android.text.TextUtils.isEmpty;
+import static se.leap.bitmaskclient.BuildConfig.DEBUG_MODE;
+import static se.leap.bitmaskclient.R.string.downloading_vpn_certificate_failed;
+import static se.leap.bitmaskclient.R.string.error_io_exception_user_message;
+import static se.leap.bitmaskclient.R.string.malformed_url;
+import static se.leap.bitmaskclient.R.string.setup_error_text;
+import static se.leap.bitmaskclient.R.string.setup_error_text_custom;
+import static se.leap.bitmaskclient.R.string.warning_corrupted_provider_cert;
+import static se.leap.bitmaskclient.R.string.warning_corrupted_provider_details;
+import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_KEY;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_VPN_CERTIFICATE;
+import static se.leap.bitmaskclient.base.utils.ConfigHelper.getProviderFormattedString;
+import static se.leap.bitmaskclient.base.utils.BuildConfigHelper.isDefaultBitmask;
+import static se.leap.bitmaskclient.providersetup.ProviderAPI.ERRORS;
+import static se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog.DOWNLOAD_ERRORS.ERROR_CERTIFICATE_PINNING;
+import static se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog.DOWNLOAD_ERRORS.ERROR_CORRUPTED_PROVIDER_JSON;
+import static se.leap.bitmaskclient.providersetup.ProviderSetupObservable.DOWNLOADED_CA_CERT;
+import static se.leap.bitmaskclient.providersetup.ProviderSetupObservable.DOWNLOADED_EIP_SERVICE_JSON;
+import static se.leap.bitmaskclient.providersetup.ProviderSetupObservable.DOWNLOADED_PROVIDER_JSON;
+import static se.leap.bitmaskclient.tor.TorStatusObservable.TorStatus.OFF;
+import static se.leap.bitmaskclient.tor.TorStatusObservable.getProxyPort;
+
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.util.Pair;
@@ -34,29 +56,10 @@ import okhttp3.OkHttpClient;
 import se.leap.bitmaskclient.R;
 import se.leap.bitmaskclient.base.models.Provider;
 import se.leap.bitmaskclient.base.utils.ConfigHelper;
+import se.leap.bitmaskclient.base.utils.PreferenceHelper;
 import se.leap.bitmaskclient.eip.EIP;
 import se.leap.bitmaskclient.providersetup.connectivity.OkHttpClientGenerator;
 import se.leap.bitmaskclient.tor.TorStatusObservable;
-
-import static android.text.TextUtils.isEmpty;
-import static se.leap.bitmaskclient.BuildConfig.DEBUG_MODE;
-import static se.leap.bitmaskclient.R.string.downloading_vpn_certificate_failed;
-import static se.leap.bitmaskclient.R.string.error_io_exception_user_message;
-import static se.leap.bitmaskclient.R.string.malformed_url;
-import static se.leap.bitmaskclient.R.string.setup_error_text;
-import static se.leap.bitmaskclient.R.string.setup_error_text_custom;
-import static se.leap.bitmaskclient.R.string.warning_corrupted_provider_cert;
-import static se.leap.bitmaskclient.R.string.warning_corrupted_provider_details;
-import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_KEY;
-import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
-import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.base.utils.ConfigHelper.getProviderFormattedString;
-import static se.leap.bitmaskclient.base.utils.ConfigHelper.isDefaultBitmask;
-import static se.leap.bitmaskclient.providersetup.ProviderAPI.ERRORS;
-import static se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog.DOWNLOAD_ERRORS.ERROR_CERTIFICATE_PINNING;
-import static se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog.DOWNLOAD_ERRORS.ERROR_CORRUPTED_PROVIDER_JSON;
-import static se.leap.bitmaskclient.tor.TorStatusObservable.TorStatus.OFF;
-import static se.leap.bitmaskclient.tor.TorStatusObservable.getProxyPort;
 
 /**
  * Implements the logic of the provider api http requests. The methods of this class need to be called from
@@ -68,8 +71,8 @@ public class ProviderApiManager extends ProviderApiManagerBase {
 
     private static final String TAG = ProviderApiManager.class.getSimpleName();
 
-    public ProviderApiManager(SharedPreferences preferences, Resources resources, OkHttpClientGenerator clientGenerator, ProviderApiServiceCallback callback) {
-        super(preferences, resources, clientGenerator, callback);
+    public ProviderApiManager(Resources resources, OkHttpClientGenerator clientGenerator, ProviderApiServiceCallback callback) {
+        super(resources, clientGenerator, callback);
     }
 
     /**
@@ -112,15 +115,19 @@ public class ProviderApiManager extends ProviderApiManagerBase {
 
         currentDownload = getAndSetProviderJson(provider);
         if (provider.hasDefinition() || (currentDownload.containsKey(BROADCAST_RESULT_KEY) && currentDownload.getBoolean(BROADCAST_RESULT_KEY))) {
+            ProviderSetupObservable.updateProgress(DOWNLOADED_PROVIDER_JSON);
             if (!provider.hasCaCert()) {
                 currentDownload = downloadCACert(provider);
             }
             if (provider.hasCaCert() || (currentDownload.containsKey(BROADCAST_RESULT_KEY) && currentDownload.getBoolean(BROADCAST_RESULT_KEY))) {
+                ProviderSetupObservable.updateProgress(DOWNLOADED_CA_CERT);
                 currentDownload = getAndSetEipServiceJson(provider);
             }
 
             if (provider.hasEIP() && !provider.allowsRegistered() && !provider.allowsAnonymous()) {
                 setErrorResult(currentDownload, isDefaultBitmask() ? setup_error_text : setup_error_text_custom, null);
+            } else if (provider.hasEIP()) {
+                ProviderSetupObservable.updateProgress(DOWNLOADED_EIP_SERVICE_JSON);
             }
         }
 
@@ -271,7 +278,7 @@ public class ProviderApiManager extends ProviderApiManagerBase {
                 if (DEBUG_MODE) {
                     VpnStatus.logDebug("[API] CA CERT: " + certString);
                 }
-                preferences.edit().putString(Provider.CA_CERT + "." + providerDomain, certString).apply();
+                PreferenceHelper.putProviderString(providerDomain, Provider.CA_CERT, certString);
                 result.putBoolean(BROADCAST_RESULT_KEY, true);
             } else {
                 setErrorResult(result, warning_corrupted_provider_cert, ERROR_CERTIFICATE_PINNING.toString());

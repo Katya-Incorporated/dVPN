@@ -56,7 +56,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -73,12 +72,14 @@ import de.blinkt.openvpn.VpnProfile;
 import de.blinkt.openvpn.core.ConnectionStatus;
 import de.blinkt.openvpn.core.LogItem;
 import de.blinkt.openvpn.core.VpnStatus;
+import se.leap.bitmaskclient.BuildConfig;
 import se.leap.bitmaskclient.appUpdate.DownloadServiceCommand;
 import se.leap.bitmaskclient.base.models.Provider;
 import se.leap.bitmaskclient.base.models.ProviderObservable;
 import se.leap.bitmaskclient.base.utils.PreferenceHelper;
 import se.leap.bitmaskclient.providersetup.ProviderAPI;
 import se.leap.bitmaskclient.providersetup.ProviderAPICommand;
+import se.leap.bitmaskclient.providersetup.ProviderSetupObservable;
 import se.leap.bitmaskclient.tor.TorServiceCommand;
 import se.leap.bitmaskclient.tor.TorStatusObservable;
 
@@ -97,12 +98,10 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
     AtomicBoolean changingGateway = new AtomicBoolean(false);
     AtomicInteger setupNClosestGateway = new AtomicInteger();
     private Vector<EipSetupListener> listeners = new Vector<>();
-    private SharedPreferences preferences;
     private static EipSetupObserver instance;
 
-    private EipSetupObserver(Context context, SharedPreferences preferences) {
+    private EipSetupObserver(Context context) {
         this.appContext = context.getApplicationContext();
-        this.preferences = preferences;
         IntentFilter updateIntentFilter = new IntentFilter(BROADCAST_GATEWAY_SETUP_OBSERVER_EVENT);
         updateIntentFilter.addAction(BROADCAST_EIP_EVENT);
         updateIntentFilter.addAction(BROADCAST_PROVIDER_API_EVENT);
@@ -114,9 +113,9 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
         VpnStatus.addLogListener(this);
     }
 
-    public static void init(Context context, SharedPreferences preferences) {
+    public static void init(Context context) {
         if (instance == null) {
-            instance = new EipSetupObserver(context, preferences);
+            instance = new EipSetupObserver(context);
         }
     }
 
@@ -179,6 +178,7 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
         Integer bootstrap = intent.getIntExtra(TorService.EXTRA_STATUS_DETAIL_BOOTSTRAP, -1);
         String logKey = intent.getStringExtra(TorService.EXTRA_STATUS_DETAIL_LOGKEY);
         TorStatusObservable.updateState(appContext, status, bootstrap, logKey);
+        ProviderSetupObservable.updateTorSetupProgress();
     }
 
 
@@ -195,7 +195,7 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
                 Log.d(TAG, "correctly updated service json");
                 provider = resultData.getParcelable(PROVIDER_KEY);
                 ProviderObservable.getInstance().updateProvider(provider);
-                PreferenceHelper.storeProviderInPreferences(preferences, provider);
+                PreferenceHelper.storeProviderInPreferences(provider);
                 if (EipStatus.getInstance().isDisconnected()) {
                     EipCommand.startVPN(appContext, false);
                 }
@@ -203,7 +203,7 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
             case CORRECTLY_UPDATED_INVALID_VPN_CERTIFICATE:
                 provider = resultData.getParcelable(PROVIDER_KEY);
                 ProviderObservable.getInstance().updateProvider(provider);
-                PreferenceHelper.storeProviderInPreferences(preferences, provider);
+                PreferenceHelper.storeProviderInPreferences(provider);
                 EipCommand.startVPN(appContext, false);
                 EipStatus.getInstance().setUpdatingVpnCert(false);
                 if (TorStatusObservable.isRunning()) {
@@ -213,7 +213,7 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
             case CORRECTLY_DOWNLOADED_GEOIP_JSON:
                 provider = resultData.getParcelable(PROVIDER_KEY);
                 ProviderObservable.getInstance().updateProvider(provider);
-                PreferenceHelper.storeProviderInPreferences(preferences, provider);
+                PreferenceHelper.storeProviderInPreferences(provider);
                 maybeStartEipService(resultData);
                 break;
             case INCORRECTLY_DOWNLOADED_GEOIP_JSON:
@@ -399,7 +399,7 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
     }
 
     private boolean shouldCheckAppUpdate() {
-        return System.currentTimeMillis() - PreferenceHelper.getLastAppUpdateCheck(appContext) >= UPDATE_CHECK_TIMEOUT;
+        return System.currentTimeMillis() - PreferenceHelper.getLastAppUpdateCheck() >= UPDATE_CHECK_TIMEOUT;
     }
 
     private void selectNextGateway() {
@@ -433,6 +433,9 @@ public class EipSetupObserver extends BroadcastReceiver implements VpnStatus.Sta
     @Override
     public void newLog(LogItem logItem) {
         if (logItem.getLogLevel() == VpnStatus.LogLevel.ERROR) {
+            if (BuildConfig.DEBUG) {
+                Log.e("ERROR", logItem.getString(appContext));
+            }
             switch (logItem.getErrorType()) {
                 case SHAPESHIFTER:
                     VpnProfile profile = VpnStatus.getLastConnectedVpnProfile();

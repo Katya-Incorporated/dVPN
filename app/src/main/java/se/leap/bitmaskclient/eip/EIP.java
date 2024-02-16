@@ -22,7 +22,6 @@ import static se.leap.bitmaskclient.R.string.vpn_certificate_is_invalid;
 import static se.leap.bitmaskclient.R.string.warning_client_parsing_error_gateways;
 import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_GATEWAY_SETUP_OBSERVER_EVENT;
 import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_KEY;
-import static se.leap.bitmaskclient.base.models.Constants.CLEARLOG;
 import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_CHECK_CERT_VALIDITY;
 import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_IS_RUNNING;
 import static se.leap.bitmaskclient.base.models.Constants.EIP_ACTION_LAUNCH_VPN;
@@ -37,7 +36,6 @@ import static se.leap.bitmaskclient.base.models.Constants.EIP_RECEIVER;
 import static se.leap.bitmaskclient.base.models.Constants.EIP_RESTART_ON_BOOT;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_PROFILE;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_VPN_CERTIFICATE;
-import static se.leap.bitmaskclient.base.models.Constants.SHARED_PREFERENCES;
 import static se.leap.bitmaskclient.base.utils.ConfigHelper.ensureNotOnMainThread;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getPreferredCity;
 import static se.leap.bitmaskclient.eip.EIP.EIPErrors.ERROR_INVALID_PROFILE;
@@ -51,7 +49,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Bundle;
@@ -70,6 +67,8 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.Closeable;
 import java.lang.ref.WeakReference;
 import java.util.Observable;
@@ -82,13 +81,10 @@ import de.blinkt.openvpn.VpnProfile;
 import de.blinkt.openvpn.core.ConnectionStatus;
 import de.blinkt.openvpn.core.IOpenVPNServiceInternal;
 import de.blinkt.openvpn.core.OpenVPNService;
-import de.blinkt.openvpn.core.Preferences;
 import de.blinkt.openvpn.core.VpnStatus;
-import de.blinkt.openvpn.core.connection.Connection;
 import se.leap.bitmaskclient.R;
 import se.leap.bitmaskclient.base.OnBootReceiver;
 import se.leap.bitmaskclient.base.models.Provider;
-import se.leap.bitmaskclient.base.models.Pair;
 import se.leap.bitmaskclient.base.models.ProviderObservable;
 import se.leap.bitmaskclient.base.utils.PreferenceHelper;
 import se.leap.bitmaskclient.eip.GatewaysManager.GatewayOptions;
@@ -103,7 +99,7 @@ import se.leap.bitmaskclient.eip.GatewaysManager.GatewayOptions;
  * @author Sean Leonard <meanderingcode@aetherislands.net>
  * @author Parménides GV <parmegv@sdf.org>
  */
-public final class EIP extends JobIntentService implements Observer {
+public final class EIP extends JobIntentService implements PropertyChangeListener {
 
 
     public final static String TAG = EIP.class.getSimpleName(),
@@ -111,7 +107,6 @@ public final class EIP extends JobIntentService implements Observer {
             ERRORS = "errors",
             ERRORID = "errorId";
 
-    private volatile SharedPreferences preferences;
     private volatile EipStatus eipStatus;
     // Service connection to OpenVpnService, shared between threads
     private volatile OpenVpnServiceConnection openVpnServiceConnection;
@@ -147,7 +142,6 @@ public final class EIP extends JobIntentService implements Observer {
         super.onCreate();
         eipStatus = EipStatus.getInstance();
         eipStatus.addObserver(this);
-        preferences = getSharedPreferences(SHARED_PREFERENCES, MODE_PRIVATE);
     }
 
     @Override
@@ -168,9 +162,9 @@ public final class EIP extends JobIntentService implements Observer {
      * update eipStatus whenever it changes
      */
     @Override
-    public void update(Observable observable, Object data) {
-        if (observable instanceof EipStatus) {
-            eipStatus = (EipStatus) observable;
+    public void propertyChange(PropertyChangeEvent evt) {
+        if (EipStatus.PROPERTY_CHANGE.equals(evt.getPropertyName())) {
+            eipStatus = (EipStatus) evt.getNewValue();
         }
     }
 
@@ -233,8 +227,9 @@ public final class EIP extends JobIntentService implements Observer {
             earlyRoutes(result);
         }
 
-        if (!preferences.getBoolean(EIP_RESTART_ON_BOOT, false)) {
-            preferences.edit().putBoolean(EIP_RESTART_ON_BOOT, true).commit();
+        if (!PreferenceHelper.getRestartOnBoot()) {
+            // TODO: check if move to async here was ok
+            PreferenceHelper.restartOnBoot(true);
         }
 
         if (!isVPNCertificateValid()) {
@@ -331,7 +326,7 @@ public final class EIP extends JobIntentService implements Observer {
 
         if (gatewayOptions == null || gatewayOptions.gateway == null ||
                 (profile = gatewayOptions.gateway.getProfile(gatewayOptions.transportType)) == null) {
-            String preferredLocation = getPreferredCity(getApplicationContext());
+            String preferredLocation = getPreferredCity();
             if (preferredLocation != null) {
                 setErrorResult(result, NO_MORE_GATEWAYS.toString(), getStringResourceForNoMoreGateways(), getString(R.string.app_name), preferredLocation);
             } else {
@@ -357,8 +352,9 @@ public final class EIP extends JobIntentService implements Observer {
             LocalBroadcastManager.getInstance(this).sendBroadcast(setupObserverIntent);
 
             // Check if we need to clear the log
-            if (Preferences.getDefaultSharedPreferences(this).getBoolean(CLEARLOG, true))
+            if (PreferenceHelper.getClearLog()) {
                 VpnStatus.clearLog();
+            }
 
             // check profile configuration
             int vpnok = profile.checkProfile(this);
@@ -424,12 +420,12 @@ public final class EIP extends JobIntentService implements Observer {
      * @return true if VPN certificate is valid false otherwise
      */
     private boolean isVPNCertificateValid() {
-        VpnCertificateValidator validator = new VpnCertificateValidator(preferences.getString(PROVIDER_VPN_CERTIFICATE, ""));
+        VpnCertificateValidator validator = new VpnCertificateValidator(PreferenceHelper.getProviderVPNCertificate());
         return validator.isValid();
     }
 
     private boolean shouldUpdateVPNCertificate() {
-        VpnCertificateValidator validator = new VpnCertificateValidator(preferences.getString(PROVIDER_VPN_CERTIFICATE, ""));
+        VpnCertificateValidator validator = new VpnCertificateValidator(PreferenceHelper.getProviderVPNCertificate());
         return validator.shouldBeUpdated();
     }
 
@@ -479,7 +475,7 @@ public final class EIP extends JobIntentService implements Observer {
      * then stop VPN
      */
     private boolean stop() {
-        preferences.edit().putBoolean(EIP_RESTART_ON_BOOT, false).apply();
+        PreferenceHelper.restartOnBoot(false);
         if (eipStatus.isBlockingVpnEstablished()) {
             stopBlockingVpn();
         }
@@ -552,11 +548,11 @@ public final class EIP extends JobIntentService implements Observer {
 
 
     private @StringRes int getStringResourceForNoMoreGateways() {
-        boolean isManualGatewaySelection = PreferenceHelper.getPreferredCity(getApplicationContext()) != null;
+        boolean isManualGatewaySelection = PreferenceHelper.getPreferredCity() != null;
         if (isManualGatewaySelection) {
             return R.string.warning_no_more_gateways_manual_gw_selection;
         } else if (ProviderObservable.getInstance().getCurrentProvider().supportsPluggableTransports()) {
-            if (PreferenceHelper.getUseBridges(getApplicationContext())) {
+            if (PreferenceHelper.getUseBridges()) {
                 return R.string.warning_no_more_gateways_use_ovpn;
             } else {
                 return R.string.warning_no_more_gateways_use_pt;

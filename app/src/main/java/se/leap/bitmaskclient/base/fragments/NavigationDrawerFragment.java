@@ -17,7 +17,6 @@
 package se.leap.bitmaskclient.base.fragments;
 
 
-import static android.content.Context.MODE_PRIVATE;
 import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 import static se.leap.bitmaskclient.base.models.Constants.DONATION_URL;
@@ -25,13 +24,13 @@ import static se.leap.bitmaskclient.base.models.Constants.ENABLE_DONATION;
 import static se.leap.bitmaskclient.base.models.Constants.PREFERRED_CITY;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
 import static se.leap.bitmaskclient.base.models.Constants.REQUEST_CODE_SWITCH_PROVIDER;
-import static se.leap.bitmaskclient.base.models.Constants.SHARED_PREFERENCES;
-import static se.leap.bitmaskclient.base.utils.ConfigHelper.isDefaultBitmask;
+import static se.leap.bitmaskclient.base.utils.BuildConfigHelper.isDefaultBitmask;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getPreferredCity;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getSaveBattery;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.saveBattery;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
@@ -39,8 +38,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -49,13 +46,15 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.graphics.drawable.DrawerArrowDrawable;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 
-import java.util.Observable;
-import java.util.Observer;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 
 import se.leap.bitmaskclient.BuildConfig;
 import se.leap.bitmaskclient.R;
@@ -63,10 +62,11 @@ import se.leap.bitmaskclient.base.FragmentManagerEnhanced;
 import se.leap.bitmaskclient.base.MainActivity;
 import se.leap.bitmaskclient.base.models.Provider;
 import se.leap.bitmaskclient.base.models.ProviderObservable;
+import se.leap.bitmaskclient.base.utils.PreferenceHelper;
 import se.leap.bitmaskclient.base.views.IconSwitchEntry;
 import se.leap.bitmaskclient.base.views.IconTextEntry;
 import se.leap.bitmaskclient.eip.EipStatus;
-import se.leap.bitmaskclient.providersetup.ProviderListActivity;
+import se.leap.bitmaskclient.providersetup.activities.SetupActivity;
 import se.leap.bitmaskclient.tethering.TetheringObservable;
 
 /**
@@ -74,7 +74,7 @@ import se.leap.bitmaskclient.tethering.TetheringObservable;
  * See the <a href="https://developer.android.com/design/patterns/navigation-drawer.html#Interaction">
  * design guidelines</a> for a complete explanation of the behaviors implemented here.
  */
-public class NavigationDrawerFragment extends Fragment implements SharedPreferences.OnSharedPreferenceChangeListener, Observer {
+public class NavigationDrawerFragment extends Fragment implements SharedPreferences.OnSharedPreferenceChangeListener, PropertyChangeListener {
 
     /**
      * Per the design guidelines, you should show the drawer on launch until the user manually
@@ -99,8 +99,6 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
     private volatile boolean wasPaused;
     private volatile boolean shouldCloseOnResume;
 
-    private SharedPreferences preferences;
-
     private final static String KEY_SHOW_SAVE_BATTERY_ALERT = "KEY_SHOW_SAVE_BATTERY_ALERT";
     private volatile boolean showSaveBattery = false;
     AlertDialog alertDialog;
@@ -108,10 +106,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Reads in the flag indicating whether or not the user has demonstrated awareness of the
-        // drawer. See PREF_USER_LEARNED_DRAWER for details.
-        preferences = getContext().getSharedPreferences(SHARED_PREFERENCES, MODE_PRIVATE);
-        preferences.registerOnSharedPreferenceChangeListener(this);
+        PreferenceHelper.registerOnSharedPreferenceChangeListener(this);
     }
 
     @Override
@@ -208,6 +203,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
                 activity.invalidateOptionsMenu();
             }
         };
+        setDrawerToggleColor(activity, ContextCompat.getColor(activity, R.color.amber200));
     }
 
     private void setupEntries() {
@@ -228,6 +224,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
         account.setText(currentProvider.getName());
         account.setOnClickListener((buttonView) -> {
             Fragment fragment = new EipFragment();
+            setDrawerToggleColor(drawerView.getContext(), ContextCompat.getColor(drawerView.getContext(), R.color.actionbar_connectivity_state_text_color_dark));
             Bundle arguments = new Bundle();
             arguments.putParcelable(PROVIDER_KEY, currentProvider);
             fragment.setArguments(arguments);
@@ -236,13 +233,22 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
         });
     }
 
+    public void setDrawerToggleColor(Context context, int color) {
+        DrawerArrowDrawable drawable = new DrawerArrowDrawable(context);
+        drawable.setTint(color);
+        drawable.setColor(color);
+        drawerToggle.setDrawerArrowDrawable(drawable);
+    }
+
     private void initSwitchProviderEntry() {
         if (isDefaultBitmask()) {
             IconTextEntry switchProvider = drawerView.findViewById(R.id.switch_provider);
             switchProvider.setVisibility(VISIBLE);
             switchProvider.setOnClickListener(v -> {
                 closeDrawer();
-                getActivity().startActivityForResult(new Intent(getActivity(), ProviderListActivity.class), REQUEST_CODE_SWITCH_PROVIDER);
+                Intent intent = new Intent(getActivity(), SetupActivity.class);
+                intent.putExtra(SetupActivity.EXTRA_SWITCH_PROVIDER, true);
+                getActivity().startActivityForResult(intent, REQUEST_CODE_SWITCH_PROVIDER);
             });
         }
     }
@@ -253,6 +259,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
         advancedSettings.setOnClickListener(v -> {
             closeDrawer();
             Fragment fragment = new SettingsFragment();
+            setDrawerToggleColor(drawerView.getContext(), ContextCompat.getColor(drawerView.getContext(), R.color.colorActionBarTitleFont));
             fragmentManager.replace(R.id.main_container, fragment, MainActivity.TAG);
         });
     }
@@ -260,7 +267,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
     private void initSaveBatteryEntry() {
         saveBattery = drawerView.findViewById(R.id.battery_switch);
         saveBattery.showSubtitle(false);
-        saveBattery.setChecked(getSaveBattery(getContext()));
+        saveBattery.setChecked(getSaveBattery());
         saveBattery.setOnCheckedChangeListener(((buttonView, isChecked) -> {
             if (!buttonView.isPressed()) {
                 return;
@@ -268,7 +275,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
             if (isChecked) {
                 showSaveBatteryAlert();
             } else {
-                saveBattery(getContext(), false);
+                saveBattery(false);
             }
         }));
         boolean enableEntry = !TetheringObservable.getInstance().getTetheringState().isVpnTetheringRunning();
@@ -288,7 +295,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
             return;
         }
         manualGatewaySelection = drawerView.findViewById(R.id.manualGatewaySelection);
-        String preferredGateway = getPreferredCity(getContext());
+        String preferredGateway = getPreferredCity();
         String subtitle = preferredGateway != null ? preferredGateway : getString(R.string.gateway_selection_recommended_location);
         manualGatewaySelection.setSubtitle(subtitle);
         boolean show =  ProviderObservable.getInstance().getCurrentProvider().hasGatewaysInDifferentLocations();
@@ -302,6 +309,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
                 return;
             }
             Fragment fragment = new GatewaySelectionFragment();
+            setDrawerToggleColor(drawerView.getContext(), ContextCompat.getColor(drawerView.getContext(), R.color.colorActionBarTitleFont));
             fragmentManager.replace(R.id.main_container, fragment, MainActivity.TAG);
         });
     }
@@ -325,6 +333,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
         log.setOnClickListener((buttonView) -> {
             closeDrawer();
             Fragment fragment = new LogFragment();
+            setDrawerToggleColor(drawerView.getContext(), ContextCompat.getColor(drawerView.getContext(), R.color.colorActionBarTitleFont));
             fragmentManager.replace(R.id.main_container, fragment, MainActivity.TAG);
         });
     }
@@ -335,6 +344,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
         about.setOnClickListener((buttonView) -> {
             closeDrawer();
             Fragment fragment = new AboutFragment();
+            setDrawerToggleColor(drawerView.getContext(), ContextCompat.getColor(drawerView.getContext(), R.color.colorActionBarTitleFont));
             fragmentManager.replace(R.id.main_container, fragment, MainActivity.TAG);
         });
     }
@@ -388,7 +398,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
                     .setTitle(activity.getString(R.string.save_battery))
                     .setMessage(activity.getString(R.string.save_battery_message))
                     .setPositiveButton((android.R.string.yes), (dialog, which) -> {
-                        saveBattery(getContext(), true);
+                        saveBattery(true);
                     })
                     .setNegativeButton(activity.getString(android.R.string.no), (dialog, which) -> saveBattery.setCheckedQuietly(false))
                     .setOnDismissListener(dialog -> showSaveBattery = false)
@@ -417,7 +427,7 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
     @Override
     public void onDestroy() {
         super.onDestroy();
-        preferences.unregisterOnSharedPreferenceChangeListener(this);
+        PreferenceHelper.unregisterOnSharedPreferenceChangeListener(this);
     }
 
     public void refresh() {
@@ -434,8 +444,8 @@ public class NavigationDrawerFragment extends Fragment implements SharedPreferen
     }
 
     @Override
-    public void update(Observable o, Object arg) {
-        if (o instanceof TetheringObservable || o instanceof EipStatus) {
+    public void propertyChange(PropertyChangeEvent evt) {
+        if (EipStatus.PROPERTY_CHANGE.equals(evt.getPropertyName()) || TetheringObservable.PROPERTY_CHANGE.equals(evt.getPropertyName())) {
             try {
                 getActivity().runOnUiThread(() ->
                         enableSaveBatteryEntry(!TetheringObservable.getInstance().getTetheringState().isVpnTetheringRunning()));

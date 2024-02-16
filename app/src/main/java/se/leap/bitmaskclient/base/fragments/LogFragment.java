@@ -8,6 +8,7 @@ package se.leap.bitmaskclient.base.fragments;
 import static de.blinkt.openvpn.core.OpenVPNService.humanReadableByteCount;
 import static se.leap.bitmaskclient.R.string.log_fragment_title;
 import static se.leap.bitmaskclient.base.utils.ViewHelper.setActionBarSubtitle;
+import static se.leap.bitmaskclient.base.utils.ViewHelper.setDefaultActivityBarColor;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -22,7 +23,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Handler.Callback;
 import android.os.Message;
-import android.preference.PreferenceManager;
 import android.text.SpannableString;
 import android.text.format.DateFormat;
 import android.view.LayoutInflater;
@@ -56,12 +56,12 @@ import de.blinkt.openvpn.core.ConnectionStatus;
 import de.blinkt.openvpn.core.LogItem;
 import de.blinkt.openvpn.core.OpenVPNManagement;
 import de.blinkt.openvpn.core.OpenVPNService;
-import de.blinkt.openvpn.core.Preferences;
 import de.blinkt.openvpn.core.VpnStatus;
 import de.blinkt.openvpn.core.VpnStatus.LogListener;
 import de.blinkt.openvpn.core.VpnStatus.StateListener;
 import se.leap.bitmaskclient.R;
-import se.leap.bitmaskclient.base.models.Constants;
+import se.leap.bitmaskclient.base.utils.PreferenceHelper;
+import se.leap.bitmaskclient.base.utils.ViewHelper;
 
 public class LogFragment extends ListFragment implements StateListener, SeekBar.OnSeekBarChangeListener, RadioGroup.OnCheckedChangeListener, VpnStatus.ByteCountListener {
     public static final String TAG = LogFragment.class.getSimpleName();
@@ -434,10 +434,10 @@ public class LogFragment extends ListFragment implements StateListener, SeekBar.
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         inflater.inflate(R.menu.f_log, menu);
-        if (getResources().getBoolean(R.bool.logSildersAlwaysVisible))
+        ViewHelper.tintMenuIcons(getContext(), menu, R.color.colorActionBarTitleFont);
+        if (getResources().getBoolean(R.bool.logSlidersAlwaysVisible))
             menu.removeItem(R.id.toggle_time);
     }
-
 
     @Override
     public void onResume() {
@@ -511,9 +511,9 @@ public class LogFragment extends ListFragment implements StateListener, SeekBar.
         }
 
         mClearLogCheckBox = v.findViewById(R.id.clearlogconnect);
-        mClearLogCheckBox.setChecked(PreferenceManager.getDefaultSharedPreferences(getActivity()).getBoolean(Constants.CLEARLOG, true));
+        mClearLogCheckBox.setChecked(PreferenceHelper.getClearLog());
         mClearLogCheckBox.setOnCheckedChangeListener((buttonView, isChecked) ->
-                Preferences.getDefaultSharedPreferences(getActivity()).edit().putBoolean(Constants.CLEARLOG, isChecked).apply());
+                PreferenceHelper.setClearLog(isChecked));
 
         mSpeedView = v.findViewById(R.id.speed);
 
@@ -524,7 +524,7 @@ public class LogFragment extends ListFragment implements StateListener, SeekBar.
 
         mLogLevelSlider.setOnSeekBarChangeListener(this);
 
-        if (getResources().getBoolean(R.bool.logSildersAlwaysVisible))
+        if (getResources().getBoolean(R.bool.logSlidersAlwaysVisible))
             mOptionsLayout.setVisibility(View.VISIBLE);
 
         mUpStatus = v.findViewById(R.id.speedUp);
@@ -534,6 +534,7 @@ public class LogFragment extends ListFragment implements StateListener, SeekBar.
             mOptionsLayout.setVisibility(View.VISIBLE);
 
         setActionBarSubtitle(this, log_fragment_title);
+        setDefaultActivityBarColor(getActivity());
         return v;
     }
 
@@ -547,7 +548,7 @@ public class LogFragment extends ListFragment implements StateListener, SeekBar.
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        if (getResources().getBoolean(R.bool.logSildersAlwaysVisible)) {
+        if (getResources().getBoolean(R.bool.logSlidersAlwaysVisible)) {
             mShowOptionsLayout = true;
             if (mOptionsLayout != null)
                 mOptionsLayout.setVisibility(View.VISIBLE);

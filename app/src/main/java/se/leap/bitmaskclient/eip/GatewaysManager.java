@@ -22,7 +22,6 @@ import static de.blinkt.openvpn.core.connection.Connection.TransportType.OPENVPN
 import static de.blinkt.openvpn.core.connection.Connection.TransportType.PT;
 import static se.leap.bitmaskclient.base.models.Constants.GATEWAYS;
 import static se.leap.bitmaskclient.base.models.Constants.HOST;
-import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_PRIVATE_KEY;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_VPN_CERTIFICATE;
 import static se.leap.bitmaskclient.base.models.Constants.SORTED_GATEWAYS;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getObfuscationPinningCert;
@@ -124,6 +123,7 @@ public class GatewaysManager {
 
     GatewaySelector gatewaySelector;
 
+
     public GatewaysManager(Context context) {
         this.context = context;
         configureFromCurrentProvider();
@@ -134,7 +134,7 @@ public class GatewaysManager {
       * @return the n closest Gateway
      */
     public GatewayOptions select(int nClosest) {
-        if (PreferenceHelper.useObfuscationPinning(context)) {
+        if (PreferenceHelper.useObfuscationPinning()) {
             if (nClosest > 2) {
                 // no need to try again the pinned proxy, probably configuration error
                 return null;
@@ -145,12 +145,12 @@ public class GatewaysManager {
             }
             return new GatewayOptions(gateway, OBFS4);
         }
-        String selectedCity = getPreferredCity(context);
+        String selectedCity = getPreferredCity();
         return select(nClosest, selectedCity);
     }
 
     public GatewayOptions select(int nClosest, String city) {
-        TransportType[] transportTypes = getUseBridges(context) ? new TransportType[]{OBFS4, OBFS4_HOP} : new TransportType[]{OPENVPN};
+        TransportType[] transportTypes = getUseBridges() ? new TransportType[]{OBFS4, OBFS4_HOP} : new TransportType[]{OPENVPN};
         if (presortedList.size() > 0) {
             return getGatewayFromPresortedList(nClosest, transportTypes, city);
         }
@@ -193,7 +193,7 @@ public class GatewaysManager {
 
         HashMap<String, Integer> locationNames = new HashMap<>();
         ArrayList<Location> locations = new ArrayList<>();
-        String preferredCity = PreferenceHelper.getPreferredCity(context);
+        String preferredCity = PreferenceHelper.getPreferredCity();
         for (Gateway gateway : gateways.values()) {
             String name = gateway.getName();
             if (name == null) {
@@ -392,7 +392,6 @@ public class GatewaysManager {
          try {
              JSONObject eipDefinition = provider.getEipServiceJson();
              JSONObject secrets = secretsConfigurationFromCurrentProvider();
-
              JSONArray gatewaysDefined = new JSONArray();
              try {
                  gatewaysDefined = eipDefinition.getJSONArray(GATEWAYS);
@@ -400,16 +399,18 @@ public class GatewaysManager {
                  e.printStackTrace();
              }
 
-             if (PreferenceHelper.useObfuscationPinning(context)) {
+             if (PreferenceHelper.useObfuscationPinning()) {
                  try {
                      Transport[] transports = new Transport[]{
                              new Transport(OBFS4.toString(),
-                                     new String[]{getObfuscationPinningKCP(context) ? "kcp" : "tcp"},
-                                     new String[]{getObfuscationPinningPort(context)},
-                                     getObfuscationPinningCert(context))};
+                                     new String[]{getObfuscationPinningKCP() ? "kcp" : "tcp"},
+                                     new String[]{getObfuscationPinningPort()},
+                                     getObfuscationPinningCert())};
                      GatewayJson.Capabilities capabilities = new GatewayJson.Capabilities(false, false, false, transports, false);
-                     GatewayJson gatewayJson = new GatewayJson(context.getString(R.string.unknown_location), getObfuscationPinningIP(context), null, PINNED_OBFUSCATION_PROXY, capabilities);
-                     Gateway gateway = new Gateway(eipDefinition, secrets, new JSONObject(gatewayJson.toString()), this.context);
+                     GatewayJson gatewayJson = new GatewayJson(context.getString(R.string.unknown_location), getObfuscationPinningIP(
+
+                     ), null, PINNED_OBFUSCATION_PROXY, capabilities);
+                     Gateway gateway = new Gateway(eipDefinition, secrets, new JSONObject(gatewayJson.toString()));
                      addGateway(gateway);
                  } catch (JSONException | ConfigParser.ConfigParseError | IOException e) {
                      e.printStackTrace();
@@ -418,7 +419,7 @@ public class GatewaysManager {
                  for (int i = 0; i < gatewaysDefined.length(); i++) {
                      try {
                          JSONObject gw = gatewaysDefined.getJSONObject(i);
-                         Gateway aux = new Gateway(eipDefinition, secrets, gw, this.context);
+                         Gateway aux = new Gateway(eipDefinition, secrets, gw);
                          if (gateways.get(aux.getHost()) == null) {
                              addGateway(aux);
                          }
@@ -488,10 +489,8 @@ public class GatewaysManager {
     private JSONObject secretsConfigurationFromCurrentProvider() {
         JSONObject result = new JSONObject();
         Provider provider = ProviderObservable.getInstance().getCurrentProvider();
-
         try {
             result.put(Provider.CA_CERT, provider.getCaCert());
-            result.put(PROVIDER_PRIVATE_KEY, provider.getPrivateKey());
             result.put(PROVIDER_VPN_CERTIFICATE, provider.getVpnCertificate());
         } catch (JSONException e) {
             e.printStackTrace();
@@ -518,7 +517,7 @@ public class GatewaysManager {
     }
 
     private boolean handleGatewayPinning() {
-         String host = PreferenceHelper.getPinnedGateway(this.context);
+         String host = PreferenceHelper.getPinnedGateway();
          if (host == null) {
              return false;
          }
