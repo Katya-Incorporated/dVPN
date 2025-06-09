@@ -16,21 +16,6 @@
  */
 package se.leap.bitmaskclient.appUpdate;
 
-import android.content.Context;
-import android.content.Intent;
-import android.os.Bundle;
-import android.os.ResultReceiver;
-import android.util.Log;
-
-import java.io.File;
-
-import okhttp3.OkHttpClient;
-import pgpverify.Logger;
-import pgpverify.PgpVerifier;
-import se.leap.bitmaskclient.BuildConfig;
-import se.leap.bitmaskclient.R;
-import se.leap.bitmaskclient.providersetup.connectivity.OkHttpClientGenerator;
-
 import static android.text.TextUtils.isEmpty;
 import static se.leap.bitmaskclient.appUpdate.DownloadService.DOWNLOAD_FAILED;
 import static se.leap.bitmaskclient.appUpdate.DownloadService.DOWNLOAD_PROGRESS;
@@ -52,6 +37,22 @@ import static se.leap.bitmaskclient.providersetup.ProviderAPI.DELAY;
 import static se.leap.bitmaskclient.providersetup.ProviderAPI.PARAMETERS;
 import static se.leap.bitmaskclient.providersetup.ProviderAPI.RECEIVER_KEY;
 
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.ResultReceiver;
+import android.util.Log;
+
+import java.io.File;
+
+import de.blinkt.openvpn.core.VpnStatus;
+import okhttp3.OkHttpClient;
+import pgpverify.Logger;
+import pgpverify.PgpVerifier;
+import se.leap.bitmaskclient.BuildConfig;
+import se.leap.bitmaskclient.R;
+import se.leap.bitmaskclient.providersetup.connectivity.OkHttpClientGenerator;
+
 public class UpdateDownloadManager implements Logger, DownloadConnector.DownloadProgress {
 
 
@@ -63,7 +64,7 @@ public class UpdateDownloadManager implements Logger, DownloadConnector.Download
 
     private Context context;
 
-    private PgpVerifier pgpVerifier;
+    private final PgpVerifier pgpVerifier;
     private DownloadServiceCallback serviceCallback;
     OkHttpClientGenerator clientGenerator;
 
@@ -76,10 +77,17 @@ public class UpdateDownloadManager implements Logger, DownloadConnector.Download
         serviceCallback = callback;
     }
 
+    public void onDestroy() {
+        serviceCallback = null;
+        context = null;
+    }
+
     //pgpverify Logger interface
     @Override
     public void log(String s) {
-
+        if (BuildConfig.DEBUG_MODE) {
+            VpnStatus.logInfo("[PGP VERIFY] " + s);
+        }
     }
 
     @Override
@@ -106,23 +114,26 @@ public class UpdateDownloadManager implements Logger, DownloadConnector.Download
         }
 
         Bundle result = new Bundle();
+        if (action == null) {
+            return;
+        }
         switch (action) {
-            case CHECK_VERSION_FILE:
+            case CHECK_VERSION_FILE -> {
                 result = checkVersionFile(result);
                 if (result.getBoolean(BROADCAST_RESULT_KEY)) {
                     sendToReceiverOrBroadcast(receiver, UPDATE_FOUND, result);
                 } else {
                     sendToReceiverOrBroadcast(receiver, UPDATE_NOT_FOUND, result);
                 }
-                break;
-            case DOWNLOAD_UPDATE:
+            }
+            case DOWNLOAD_UPDATE -> {
                 result = downloadUpdate(result);
                 if (result.getBoolean(BROADCAST_RESULT_KEY)) {
                     sendToReceiverOrBroadcast(receiver, UPDATE_DOWNLOADED, result);
                 } else {
                     sendToReceiverOrBroadcast(receiver, UPDATE_DOWNLOAD_FAILED, result);
                 }
-                break;
+            }
         }
     }
 

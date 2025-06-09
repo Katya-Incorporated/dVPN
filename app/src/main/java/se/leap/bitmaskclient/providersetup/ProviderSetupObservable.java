@@ -16,6 +16,8 @@ package se.leap.bitmaskclient.providersetup;
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+import android.os.Bundle;
+
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 
@@ -36,6 +38,9 @@ public class ProviderSetupObservable {
     private boolean canceled = false;
     public static final int DOWNLOADED_PROVIDER_JSON = 20;
     public static final int DOWNLOADED_CA_CERT = 40;
+    public static final int DOWNLOADED_V5_SERVICE_JSON = 40;
+    public static final int DOWNLOADED_V5_GATEWAYS = 60;
+    public static final int DOWNLOADED_V5_BRIDGES = 80;
     public static final int DOWNLOADED_EIP_SERVICE_JSON = 60;
     public static final int DOWNLOADED_GEOIP_JSON = 80;
     public static final int DOWNLOADED_VPN_CERTIFICATE = 100;
@@ -45,13 +50,15 @@ public class ProviderSetupObservable {
     public static final String PROPERTY_CHANGE = "ProviderSetupObservable";
     private final HandlerInterface handler;
     private long lastUpdate = 0;
+    private int resultCode = 0;
+    private Bundle resultData;
 
 
 
     private ProviderSetupObservable() {
         handler = HandlerProvider.get();
         changeSupport = new PropertyChangeSupport(this);
-
+        resultData = new Bundle();
     }
 
     public void addObserver(PropertyChangeListener propertyChangeListener) {
@@ -68,6 +75,14 @@ public class ProviderSetupObservable {
             instance = new ProviderSetupObservable();
         }
         return instance;
+    }
+
+    public static void storeLastResult(int resultCode, Bundle resultData) {
+        if (getInstance().canceled) {
+            return;
+        }
+        getInstance().resultCode = resultCode;
+        getInstance().resultData = resultData;
     }
 
     public static void updateProgress(int progress) {
@@ -105,8 +120,14 @@ public class ProviderSetupObservable {
         return getInstance().progress;
     }
 
+    public static boolean isSetupRunning() {
+        return getInstance().progress > 0;
+    }
+
     public static void reset() {
         getInstance().progress = 0;
+        getInstance().resultCode = 0;
+        getInstance().resultData = new Bundle();
         getInstance().changeSupport.firePropertyChange(PROPERTY_CHANGE, null, getInstance());
     }
 
@@ -121,5 +142,16 @@ public class ProviderSetupObservable {
 
     public static void startSetup() {
         getInstance().canceled = false;
+        getInstance().resultCode = 0;
+        getInstance().progress = 1;
+        getInstance().resultData = new Bundle();
+    }
+
+    public static int getResultCode() {
+        return getInstance().resultCode;
+    }
+
+    public static Bundle getResultData() {
+        return getInstance().resultData;
     }
 }

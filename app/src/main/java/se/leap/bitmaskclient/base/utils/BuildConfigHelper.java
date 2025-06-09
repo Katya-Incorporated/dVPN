@@ -11,29 +11,26 @@ import se.leap.bitmaskclient.BuildConfig;
 public class BuildConfigHelper {
 
     public interface BuildConfigHelperInterface {
-        boolean useObfsVpn();
         boolean hasObfuscationPinningDefaults();
         String obfsvpnIP();
         String obfsvpnPort();
         String obfsvpnCert();
-        boolean useKcp();
+        String obfsvpnTransportProtocol();
         boolean isDefaultBitmask();
     }
 
     public static class DefaultBuildConfigHelper implements BuildConfigHelperInterface {
-        @Override
-        public boolean useObfsVpn() {
-            return BuildConfig.use_obfsvpn;
-        }
 
         @Override
         public boolean hasObfuscationPinningDefaults() {
             return BuildConfig.obfsvpn_ip != null &&
                     BuildConfig.obfsvpn_port != null &&
                     BuildConfig.obfsvpn_cert != null &&
+                    BuildConfig.obfsvpn_transport_protocol != null &&
                     !BuildConfig.obfsvpn_ip.isEmpty() &&
                     !BuildConfig.obfsvpn_port.isEmpty() &&
-                    !BuildConfig.obfsvpn_cert.isEmpty();
+                    !BuildConfig.obfsvpn_cert.isEmpty() &&
+                    !BuildConfig.obfsvpn_transport_protocol.isEmpty();
         }
 
         @Override
@@ -52,8 +49,8 @@ public class BuildConfigHelper {
         }
 
         @Override
-        public boolean useKcp() {
-            return BuildConfig.obfsvpn_use_kcp;
+        public String obfsvpnTransportProtocol() {
+            return BuildConfig.obfsvpn_transport_protocol;
         }
 
         @Override
@@ -72,10 +69,6 @@ public class BuildConfigHelper {
         instance = helperInterface;
     }
 
-    public static boolean useObfsVpn() {
-        return instance.useObfsVpn();
-    }
-
     public static boolean hasObfuscationPinningDefaults() {
         return instance.hasObfuscationPinningDefaults();
     }
@@ -88,8 +81,8 @@ public class BuildConfigHelper {
     public static String obfsvpnCert() {
         return instance.obfsvpnCert();
     }
-    public static boolean useKcp() {
-        return instance.useKcp();
+    public static String obfsvpnTransportProtocol() {
+        return instance.obfsvpnTransportProtocol();
     }
 
     public static boolean isDefaultBitmask() {

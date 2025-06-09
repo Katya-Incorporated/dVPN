@@ -7,7 +7,6 @@ import static se.leap.bitmaskclient.providersetup.fragments.SetupFragmentFactory
 import static se.leap.bitmaskclient.providersetup.fragments.SetupFragmentFactory.NOTIFICATION_PERMISSON_FRAGMENT;
 import static se.leap.bitmaskclient.providersetup.fragments.SetupFragmentFactory.PROVIDER_SELECTION_FRAGMENT;
 import static se.leap.bitmaskclient.providersetup.fragments.SetupFragmentFactory.SUCCESS_FRAGMENT;
-import static se.leap.bitmaskclient.providersetup.fragments.SetupFragmentFactory.VPN_PERMISSON_EDUCATIONAL_FRAGMENT;
 import static se.leap.bitmaskclient.providersetup.fragments.SetupFragmentFactory.VPN_PERMISSON_FRAGMENT;
 
 import android.content.Intent;
@@ -38,19 +37,21 @@ public class SetupViewPagerAdapter extends FragmentStateAdapter {
                 fragments.add(PROVIDER_SELECTION_FRAGMENT);
             }
             fragments.add(CIRCUMVENTION_SETUP_FRAGMENT);
-            fragments.add(CONFIGURE_PROVIDER_FRAGMENT);
         }
-
+        if (showNotificationPermission || vpnPermissionRequest != null) {
+            fragments.add(NOTIFICATION_PERMISSON_EDUCATIONAL_FRAGMENT);
+        }
         if (vpnPermissionRequest != null) {
-            fragments.add(VPN_PERMISSON_EDUCATIONAL_FRAGMENT);
             fragments.add(VPN_PERMISSON_FRAGMENT);
         }
         if (showNotificationPermission) {
-            fragments.add(NOTIFICATION_PERMISSON_EDUCATIONAL_FRAGMENT);
             fragments.add(NOTIFICATION_PERMISSON_FRAGMENT);
         }
+        if (providerSetup) {
+            fragments.add(CONFIGURE_PROVIDER_FRAGMENT);
+        }
         fragments.add(SUCCESS_FRAGMENT);
-        setupFragmentFactory = new SetupFragmentFactory(fragments, vpnPermissionRequest);
+        setupFragmentFactory = new SetupFragmentFactory(fragments, vpnPermissionRequest, showNotificationPermission);
     }
 
     @NonNull

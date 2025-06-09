@@ -50,6 +50,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.appcompat.widget.AppCompatTextView;
 import androidx.core.content.ContextCompat;
+import androidx.core.os.BundleCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
@@ -116,7 +117,7 @@ public class EipFragment extends Fragment implements PropertyChangeListener {
         Activity activity = getActivity();
         if (activity != null) {
             if (arguments != null) {
-                provider = arguments.getParcelable(PROVIDER_KEY);
+                provider = BundleCompat.getParcelable(arguments, PROVIDER_KEY, Provider.class);
                 if (provider == null) {
                     handleNoProvider(activity);
                 } else {
@@ -307,7 +308,7 @@ public class EipFragment extends Fragment implements PropertyChangeListener {
             Log.e(TAG, "context is null when trying to start VPN");
             return;
         }
-        if (!provider.getGeoipUrl().isDefault() && provider.shouldUpdateGeoIpJson()) {
+        if (!provider.getGeoipUrl().isEmpty() && provider.shouldUpdateGeoIpJson()) {
             Bundle bundle = new Bundle();
             bundle.putBoolean(EIP_ACTION_START, true);
             bundle.putBoolean(EIP_EARLY_ROUTES, false);

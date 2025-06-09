@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="terms_of_service_calyx">باستخدام هذا التطبيق ، فإنك توافق على شروط الخدمة المتاحة على https://calyxinstitute.org/legal/terms-of-service. يتم تقديم هذه الخدمة كما هي دون أي ضمان وهي مخصصة للأشخاص الذين يعملون لجعل العالم مكانًا أفضل.</string>
+    <string name="donate_message_calyx">Calyx VPN هي خدمة VPN سهلة وسريعة وآمنة من معهد Calyx. يمكنك قراءة المزيد والتبرع على https://calyxinstitute.org.</string>
+</resources>

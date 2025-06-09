@@ -5,8 +5,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import android.os.Build;
+
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 import se.leap.bitmaskclient.base.utils.BuildConfigHelper;
 import se.leap.bitmaskclient.testutils.MockHelper;
@@ -16,6 +21,8 @@ import se.leap.bitmaskclient.testutils.TestSetupHelper;
  * Created by cyberta on 12.02.18.
  */
 
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk = {Build.VERSION_CODES.P})
 public class ProviderTest {
 
     @Before
@@ -118,7 +125,23 @@ public class ProviderTest {
     }
 
     @Test
-    public void testSupportsPluggableTransports_Obfs4Kcp_noObsvpn_returnsFalse() throws Exception {
+    public void testIsExperimentalPluggableTransportsSupported_Obfs4Quic_returnsTrue() throws Exception {
+        Provider p1 = TestSetupHelper.getProvider(
+                "https://pt.demo.bitmask.net",
+                null,
+                null,
+                null,
+                null,
+                null,
+                "multiple_pts_per_host_eip-service.json",
+                null);
+        assertTrue(p1.supportsExperimentalPluggableTransports());
+    }
+
+    @Test
+    public void testSupportsPluggableTransports_Obfs4Kcp_obsvpn_returnsTrue() throws Exception {
+        BuildConfigHelper helper = MockHelper.mockBuildConfigHelper(true);
+
         Provider p1 = TestSetupHelper.getProvider(
                 "https://pt.demo.bitmask.net",
                 null,
@@ -128,11 +151,11 @@ public class ProviderTest {
                 null,
                 "ptdemo_only_experimental_transports_gateways.json",
                 null);
-        assertFalse(p1.supportsPluggableTransports());
+        assertTrue(p1.supportsPluggableTransports());
     }
 
     @Test
-    public void testSupportsPluggableTransports_Obfs4Kcp_obsvpn_returnsTrue() throws Exception {
+    public void testSupportsPluggableTransports_Obfs4Quic_obsvpn_returnsTrue() throws Exception {
         BuildConfigHelper helper = MockHelper.mockBuildConfigHelper(true);
 
         Provider p1 = TestSetupHelper.getProvider(

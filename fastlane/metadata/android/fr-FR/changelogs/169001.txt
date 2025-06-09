@@ -1,0 +1,3 @@
+• Basé sur Bitmask v1.1.8
+• Nouveau certificat d'Autorité de Certification
+• Mises à jour des traductions

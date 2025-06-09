@@ -1,0 +1,11 @@
+Cu CalyxVPN, poți cripta în siguranță tot traficul de rețea și îl poți ruta prin Institutul Calyx.
+
+• VPN anonim: fără conturi de utilizator și fără înregistrare.
+• Adresă IP anonimă: Când conexiunea VPN este activă, toate serverele de pe internet vor vedea ca provenind de la o IP anonimă găzduită de Calyx.
+• Gratuit: Acesta este un serviciu gratuit oferit de Institutul Calyx.
+• Open Source: Atât clientul, cât și serverul sunt 100% gratuit și software open source.
+• Fără scurgeri IPv6: CalyxVPN nu va scurge traficul IPv6 (necesită root).
+• Fără scurgeri de DNS: CalyxVPN este configurat atât pe client, cât și pe server pentru a preveni orice scurgere de DNS. Toate solicitările DNS sunt gestionate anonim de Calyx atunci când VPN-ul este activat.
+• Eludare: Când opțiunea „Utilizare poduri” este activată, tot traficul este ascuns ca trafic web normal, pentru a evita unele sisteme de cenzură care blochează traficul VPN.
+
+Ca și în cazul tuturor VPN-urilor, CalyxVPN adaugă securitate doar datelor pe măsură ce acestea circulă prin rețea. Nu poate proteja conținutul datelor stocate sau pe care le oferi unui site web. De asemenea, nu împiedică publicitatea și urmărirea în aplicațiile sau browser-ul web (cu excepția cazului în care această urmărire se bazează pe adresa dvs. IP).

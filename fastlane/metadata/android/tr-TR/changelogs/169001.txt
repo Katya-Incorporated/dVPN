@@ -1,0 +1,3 @@
+• Bitmask 1.1.8 sürümü temel alındı
+• Yeni CA sertifikası
+• Çeviri güncellemeleri

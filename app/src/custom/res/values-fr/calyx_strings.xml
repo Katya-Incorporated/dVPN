@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="donate_message_calyx">Calyx VPN est un service VPN simple, rapide et sécurisé proposé par l\'Institut Calyx. Vous pouvez en savoir plus et faire un don sur https://calyxinstitute.org.</string>
+    <string name="terms_of_service_calyx">En utilisant cette application, vous acceptez les conditions de service disponibles à l\'adresse https://calyxinstitute.org/legal/terms-of-service. Ce service est fourni tel quel, sans aucune garantie, et est destiné aux personnes qui travaillent à rendre le monde meilleur.</string>
+</resources>

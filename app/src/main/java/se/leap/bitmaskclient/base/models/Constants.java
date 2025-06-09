@@ -42,6 +42,8 @@ public interface Constants {
     String RESTART_ON_UPDATE = "restart_on_update";
     String LAST_UPDATE_CHECK = "last_update_check";
     String PREFERRED_CITY = "preferred_city";
+    // ATTENTION: this key is also used in bitmask-core for persistence
+    String COUNTRYCODE = "COUNTRYCODE";
     String USE_SNOWFLAKE = "use_snowflake";
     String PREFER_UDP = "prefer_UDP";
     String GATEWAY_PINNING = "gateway_pinning";
@@ -51,8 +53,12 @@ public interface Constants {
     String OBFUSCATION_PINNING_PORT = "obfuscation_pinning_port";
     String OBFUSCATION_PINNING_CERT = "obfuscation_pinning_cert";
     String OBFUSCATION_PINNING_KCP = "obfuscation_pinning_udp";
+    String OBFUSCATION_PINNING_PROTOCOL = "obfuscation_pinning_protocol";
     String OBFUSCATION_PINNING_LOCATION = "obfuscation_pinning_location";
     String USE_SYSTEM_PROXY = "usesystemproxy";
+    String CUSTOM_PROVIDER_DOMAINS = "custom_provider_domains";
+    String USE_PORT_HOPPING = "use_port_hopping";
+    String USE_TUNNEL = "tunnel";
 
 
     //////////////////////////////////////////////
@@ -121,6 +127,10 @@ public interface Constants {
     String PROVIDER_MOTD_HASHES = "Constants.PROVIDER_MOTD_HASHES";
     String PROVIDER_MOTD_LAST_SEEN = "Constants.PROVIDER_MOTD_LAST_SEEN";
     String PROVIDER_MOTD_LAST_UPDATED = "Constants.PROVIDER_MOTD_LAST_UPDATED";
+    String PROVIDER_MODELS_PROVIDER = "Constants.PROVIDER_MODELS_PROVIDER";
+    String PROVIDER_MODELS_EIPSERVICE = "Constants.PROVIDER_MDOELS_EIPSERVICE";
+    String PROVIDER_MODELS_GATEWAYS = "Constants.PROVIDER_MODELS_GATEWAYS";
+    String PROVIDER_MODELS_BRIDGES = "Constants.PROVIDER_MODELS_BRIDGES";
 
     ////////////////////////////////////////////////
     // PRESHIPPED PROVIDER CONFIG
@@ -183,6 +193,7 @@ public interface Constants {
     String UDP = "udp";
     String TCP = "tcp";
     String KCP = "kcp";
+    String QUIC = "quic";
     String CAPABILITIES = "capabilities";
     String TRANSPORT = "transport";
     String TYPE = "type";
@@ -193,6 +204,10 @@ public interface Constants {
     String ENDPOINTS = "endpoints";
     String PORT_SEED = "port_seed";
     String PORT_COUNT = "port_count";
+    String HOP_JITTER = "hop_jitter";
+    String MIN_HOP_PORT = "min_hop_port";
+    String MAX_HOP_PORT = "max_hop_port";
+    String MIN_HOP_SECONDS = "min_hop_seconds";
     String EXPERIMENTAL = "experimental";
     String VERSION = "version";
     String NAME = "name";

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="donate_message_calyx">Calyx VPN, Calyx Enstitüsü\'nden kolay, hızlı ve güvenli bir VPN hizmetidir. https://calyxinstitute.org adresinden daha fazlasını okuyabilir ve bağışta bulunabilirsiniz.</string>
+    <string name="terms_of_service_calyx">Bu uygulamayı kullanarak https://calyxinstitute.org/legal/terms-of-service adresinde bulunan Hizmet Koşullarını kabul etmiş olursunuz. Bu hizmet, herhangi bir garanti olmaksızın olduğu gibi sağlanır ve dünyayı daha iyi bir yer haline getirmek için çalışan insanlara yöneliktir.</string>
+</resources>

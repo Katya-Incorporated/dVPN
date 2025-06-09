@@ -33,7 +33,7 @@ RUN apt-get update -qq && \
 # --- Install Android NDK (for running C code)
 
 ENV ANDROID_NDK_VERSION "r21e"
-ENV ANDROID_NDK_HOME ${ANDROID_HOME}/android-ndk-${ANDROID_NDK_VERSION}
+ENV ANDROID_NDK_VERSION_NUMBER "21.4.7075529"
 ENV ANDROID_NDK_URL http://dl.google.com/android/repository/android-ndk-${ANDROID_NDK_VERSION}-linux-x86_64.zip
 ENV ANDROID_SDK_ROOT ${ANDROID_HOME}/latest/cmdline-tools
 
@@ -43,10 +43,10 @@ RUN java --version
 
 RUN curl -L $ANDROID_NDK_URL -o ndk.zip  \
     && unzip ndk.zip -d $ANDROID_HOME/ndk  \
-    && rm -rf ndk.zip
-RUN cat $ANDROID_HOME/ndk/android-ndk-${ANDROID_NDK_VERSION}/source.properties | \
-    grep Pkg.Revision | cut -d "=" -f 2 | \
-    xargs -I '{}' mv $ANDROID_HOME/ndk/android-ndk-${ANDROID_NDK_VERSION}/ $ANDROID_HOME/ndk/'{}'
+    && rm -rf ndk.zip \
+    && mv $ANDROID_HOME/ndk/android-ndk-${ANDROID_NDK_VERSION}/ $ANDROID_HOME/ndk/$ANDROID_NDK_VERSION_NUMBER
+
+ENV ANDROID_NDK_HOME ${ANDROID_HOME}/ndk/$ANDROID_NDK_VERSION_NUMBER
 ENV PATH ${PATH}:${ANDROID_NDK_HOME}
 
 RUN echo "accept all licenses"
@@ -56,3 +56,17 @@ RUN sdkmanager --list
 
 # Install Android cmake
 RUN sdkmanager "cmake;3.10.2.4988404"
+
+# Install Go environment
+ENV GO_VERSION=go1.22.2.linux-amd64
+ENV EXPECTED_FP=5901c52b7a78002aeff14a21f93e0f064f74ce1360fce51c6ee68cd471216a17
+ENV GO_DOWNLOAD_URL=https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz
+ENV GOROOT=/usr/local/go
+ENV GOBIN=/usr/local/go/bin
+ENV PATH=$GOBIN:$PATH
+
+RUN curl -L -o "go.tar.gz" "https://golang.org/dl/${GO_VERSION}.tar.gz"; \
+    echo "${EXPECTED_FP} go.tar.gz" | sha256sum -c - && \
+    tar -C /usr/local -xzf go.tar.gz && \
+    rm go.tar.gz \
+

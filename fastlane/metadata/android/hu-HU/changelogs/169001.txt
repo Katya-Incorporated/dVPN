@@ -1,0 +1,3 @@
+• Bitmask v1.1.8 alapra helyezve
+• Új CA tanusítvány
+• Fordítási frissítések

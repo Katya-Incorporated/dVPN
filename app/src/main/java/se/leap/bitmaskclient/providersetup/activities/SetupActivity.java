@@ -3,9 +3,12 @@ package se.leap.bitmaskclient.providersetup.activities;
 import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 import static androidx.appcompat.app.ActionBar.DISPLAY_SHOW_CUSTOM;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
 import static se.leap.bitmaskclient.base.utils.BuildConfigHelper.isDefaultBitmask;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.deleteProviderDetailsFromPreferences;
+import static se.leap.bitmaskclient.providersetup.fragments.SetupFragmentFactory.CIRCUMVENTION_SETUP_FRAGMENT;
 import static se.leap.bitmaskclient.providersetup.fragments.SetupFragmentFactory.CONFIGURE_PROVIDER_FRAGMENT;
+import static se.leap.bitmaskclient.providersetup.fragments.SetupFragmentFactory.PROVIDER_SELECTION_FRAGMENT;
 import static se.leap.bitmaskclient.tor.TorStatusObservable.TorStatus.OFF;
 
 import android.Manifest;
@@ -29,8 +32,11 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.core.os.BundleCompat;
 import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
 import org.json.JSONException;
@@ -38,10 +44,12 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Objects;
 
 import se.leap.bitmaskclient.BuildConfig;
 import se.leap.bitmaskclient.R;
 import se.leap.bitmaskclient.base.FragmentManagerEnhanced;
+import se.leap.bitmaskclient.base.models.Introducer;
 import se.leap.bitmaskclient.base.models.Provider;
 import se.leap.bitmaskclient.base.models.ProviderObservable;
 import se.leap.bitmaskclient.base.utils.ViewHelper;
@@ -50,6 +58,7 @@ import se.leap.bitmaskclient.databinding.ActivitySetupBinding;
 import se.leap.bitmaskclient.providersetup.ProviderSetupFailedDialog;
 import se.leap.bitmaskclient.providersetup.ProviderSetupObservable;
 import se.leap.bitmaskclient.providersetup.SetupViewPagerAdapter;
+import se.leap.bitmaskclient.providersetup.fragments.ProviderSelectionFragment;
 import se.leap.bitmaskclient.tor.TorServiceCommand;
 import se.leap.bitmaskclient.tor.TorStatusObservable;
 
@@ -73,7 +82,7 @@ public class SetupActivity extends AppCompatActivity implements SetupActivityCal
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (savedInstanceState != null) {
-            provider = savedInstanceState.getParcelable(EXTRA_PROVIDER);
+            provider = BundleCompat.getParcelable(savedInstanceState, EXTRA_PROVIDER, Provider.class);
             currentPosition = savedInstanceState.getInt(EXTRA_CURRENT_POSITION);
             switchProvider = savedInstanceState.getBoolean(EXTRA_SWITCH_PROVIDER);
         }
@@ -89,6 +98,13 @@ public class SetupActivity extends AppCompatActivity implements SetupActivityCal
         if (isDefaultBitmask()) {
             // indicator view for provider selection
             addIndicatorView(indicatorViews);
+        }
+
+        if (getIntent() != null) {
+            if (ProviderObservable.getInstance().getCurrentProvider().isConfigured()){
+                switchProvider = true;
+            }
+            manageIntent(getIntent());
         }
 
         // indicator views for config setup
@@ -139,11 +155,14 @@ public class SetupActivity extends AppCompatActivity implements SetupActivityCal
         });
         binding.viewPager.setAdapter(adapter);
         binding.viewPager.setUserInputEnabled(false);
-        binding.viewPager.setCurrentItem(currentPosition, false);
+
 
         binding.setupNextButton.setOnClickListener(v -> {
             int currentPos = binding.viewPager.getCurrentItem();
             int newPos = currentPos + 1;
+            if (newPos == CIRCUMVENTION_SETUP_FRAGMENT && provider.hasIntroducer()) {
+                newPos = newPos + 1; // skip configuration of `CIRCUMVENTION_SETUP_FRAGMENT` when invite code provider is selected
+            }
             if (newPos >= binding.viewPager.getAdapter().getItemCount()) {
                 return;
             }
@@ -153,6 +172,59 @@ public class SetupActivity extends AppCompatActivity implements SetupActivityCal
             cancel();
         });
         setupActionBar();
+
+        if (ProviderSetupObservable.isSetupRunning()) {
+            provider = BundleCompat.getParcelable(ProviderSetupObservable.getResultData(), PROVIDER_KEY, Provider.class);
+            if (provider != null) {
+                currentPosition = adapter.getFragmentPostion(CONFIGURE_PROVIDER_FRAGMENT);
+            }
+        }
+        binding.viewPager.setCurrentItem(currentPosition, false);
+    }
+
+    /**
+     * Manages the incoming intent and processes the provider selection if the intent action is ACTION_VIEW
+     * and the data scheme is "obfsvpnintro". This method create an introducer from the URI data and sets the
+     * current provider to the introducer.
+     * <p>
+     *     If the current fragment is a ProviderSelectionFragment, it will notify the fragment that the provider
+     *     selection has changed.
+     * </p>
+     *
+     *
+     * @param intent The incoming intent to be managed.
+     * @see #onProviderSelected(Provider)
+     * @see ProviderSelectionFragment#providerSelectionChanged()
+     */
+    private void manageIntent(Intent intent) {
+        if (Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
+            String scheme = intent.getData().getScheme();
+
+            if (Objects.equals(scheme, "obfsvpnintro")) {
+                try {
+                    onProviderSelected(new Provider(Introducer.fromUrl(intent.getData().toString())));
+                    binding.viewPager.setCurrentItem(adapter.getFragmentPostion(PROVIDER_SELECTION_FRAGMENT));
+                    binding.viewPager.post(() -> {
+                        /**
+                         * @see FragmentStateAdapter#saveState()
+                         */
+                        String fragmentTag = "f" + binding.viewPager.getCurrentItem();
+                        Fragment fragment = getSupportFragmentManager().findFragmentByTag(fragmentTag);
+                        if (fragment instanceof ProviderSelectionFragment){
+                            ((ProviderSelectionFragment) fragment).providerSelectionChanged();
+                        }
+                    });
+                } catch (Exception e) {
+                    Log.d("invite", e.getMessage());
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        manageIntent(intent);
     }
 
     @Override
@@ -324,6 +396,7 @@ public class SetupActivity extends AppCompatActivity implements SetupActivityCal
 
     @Override
     public void retrySetUpProvider(@NonNull Provider provider) {
+        ProviderSetupObservable.reset();
         onProviderSelected(provider);
         binding.viewPager.setCurrentItem(adapter.getFragmentPostion(CONFIGURE_PROVIDER_FRAGMENT));
     }

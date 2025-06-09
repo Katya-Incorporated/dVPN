@@ -16,6 +16,7 @@ package se.leap.bitmaskclient.tor;
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
 import static se.leap.bitmaskclient.tor.TorNotificationManager.TOR_SERVICE_NOTIFICATION_ID;
 import static se.leap.bitmaskclient.tor.TorStatusObservable.waitUntil;
 
@@ -26,6 +27,7 @@ import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.WorkerThread;
+import androidx.core.app.ServiceCompat;
 
 import org.torproject.jni.TorService;
 
@@ -62,9 +64,15 @@ public class TorServiceCommand {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 Notification notification = TorNotificationManager.buildTorForegroundNotification(context.getApplicationContext());
+                if (notification == null) {
+                    if (torServiceConnection != null) {
+                        torServiceConnection.close();
+                    }
+                    return false;
+                }
                 //noinspection NewApi
                 context.getApplicationContext().startForegroundService(torServiceIntent);
-                torServiceConnection.getService().startForeground(TOR_SERVICE_NOTIFICATION_ID, notification);
+                ServiceCompat.startForeground(torServiceConnection.getService(), TOR_SERVICE_NOTIFICATION_ID, notification, FOREGROUND_SERVICE_TYPE_DATA_SYNC);
             } else {
                 context.getApplicationContext().startService(torServiceIntent);
             }
@@ -117,6 +125,21 @@ public class TorServiceCommand {
             TorServiceConnection torServiceConnection = initTorServiceConnection(context);
             if (torServiceConnection != null) {
                 int tunnelPort = torServiceConnection.getService().getHttpTunnelPort();
+                torServiceConnection.close();
+                return tunnelPort;
+            }
+        } catch (InterruptedException | IllegalStateException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    @WorkerThread
+    public static int getSocksProxyPort(Context context) {
+        try {
+            TorServiceConnection torServiceConnection = initTorServiceConnection(context);
+            if (torServiceConnection != null) {
+                int tunnelPort = torServiceConnection.getService().getSocksPort();
                 torServiceConnection.close();
                 return tunnelPort;
             }

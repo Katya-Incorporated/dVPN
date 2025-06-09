@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--Colors-->
-    <color name="colorPrimary">#1565C0</color>
-    <color name="colorPrimaryDark">#104E95</color>
+    <!--Color of the action bar-->
+    <color name="colorPrimary">#8EA844</color>
+    <!--Color of the status bar-->
+    <color name="colorPrimaryDark">#8EA844</color>
     <color name="colorPrimaryLight">@color/colorPrimary</color>
 
     <!--Color of the action bar-->

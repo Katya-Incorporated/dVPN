@@ -3,12 +3,12 @@ package se.leap.bitmaskclient.base.fragments;
 import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 import static se.leap.bitmaskclient.R.string.advanced_settings;
+import static se.leap.bitmaskclient.base.fragments.CensorshipCircumventionFragment.TUNNELING_AUTOMATICALLY;
 import static se.leap.bitmaskclient.base.models.Constants.GATEWAY_PINNING;
 import static se.leap.bitmaskclient.base.models.Constants.PREFER_UDP;
 import static se.leap.bitmaskclient.base.models.Constants.USE_BRIDGES;
 import static se.leap.bitmaskclient.base.models.Constants.USE_IPv6_FIREWALL;
 import static se.leap.bitmaskclient.base.models.Constants.USE_OBFUSCATION_PINNING;
-import static se.leap.bitmaskclient.base.utils.BuildConfigHelper.useObfsVpn;
 import static se.leap.bitmaskclient.base.utils.ConfigHelper.isCalyxOSWithTetheringSupport;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.allowExperimentalTransports;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getExcludedApps;
@@ -18,11 +18,16 @@ import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getUseBridges;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getUseSnowflake;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.hasSnowflakePrefs;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.preferUDP;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.resetSnowflakeSettings;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.setAllowExperimentalTransports;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.setUseObfuscationPinning;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.setUsePortHopping;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.setUseTunnel;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.useBridges;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.useManualDiscoverySettings;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.useObfuscationPinning;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.useSnowflake;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.useManualBridgeSettings;
 import static se.leap.bitmaskclient.base.utils.ViewHelper.setActionBarSubtitle;
 
 import android.app.AlertDialog;
@@ -36,10 +41,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.AppCompatTextView;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
@@ -79,8 +87,8 @@ public class SettingsFragment extends Fragment implements SharedPreferences.OnSh
         initAlwaysOnVpnEntry(view);
         initExcludeAppsEntry(view);
         initPreferUDPEntry(view);
-        initUseBridgesEntry(view);
-        initUseSnowflakeEntry(view);
+        initAutomaticCircumventionEntry(view);
+        initManualCircumventionEntry(view);
         initFirewallEntry(view);
         initTetheringEntry(view);
         initGatewayPinningEntry(view);
@@ -90,48 +98,91 @@ public class SettingsFragment extends Fragment implements SharedPreferences.OnSh
         return view;
     }
 
-    @Override
-    public void onDestroy() {
-        PreferenceHelper.unregisterOnSharedPreferenceChangeListener(this);
-        super.onDestroy();
-    }
+    private void initAutomaticCircumventionEntry(View rootView) {
+        IconSwitchEntry automaticCircumvention = rootView.findViewById(R.id.bridge_automatic_switch);
+        automaticCircumvention.setChecked(getUseBridges() && !useManualBridgeSettings());
+        automaticCircumvention.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (!buttonView.isPressed()) {
+                return;
+            }
 
-    private void initUseBridgesEntry(View rootView) {
-        IconSwitchEntry useBridges = rootView.findViewById(R.id.bridges_switch);
-        if (ProviderObservable.getInstance().getCurrentProvider().supportsPluggableTransports()) {
-            useBridges.setVisibility(VISIBLE);
-            useBridges.setChecked(getUseBridges());
-            useBridges.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (!buttonView.isPressed()) {
-                    return;
-                }
+            if (isChecked) {
+                resetSnowflakeSettings();
+                setUseTunnel(TUNNELING_AUTOMATICALLY);
+                setUsePortHopping(false);
+            } else {
+                useSnowflake(false);
+            }
+            if (ProviderObservable.getInstance().getCurrentProvider().supportsPluggableTransports()) {
                 useBridges(isChecked);
                 if (VpnStatus.isVPNActive()) {
                     EipCommand.startVPN(getContext(), false);
                     Toast.makeText(getContext(), R.string.reconnecting, Toast.LENGTH_LONG).show();
                 }
-            });
-            //We check the UI state of the useUdpEntry here as well, in order to avoid a situation
-            //where both entries are disabled, because both preferences are enabled.
-            //bridges can be enabled not only from here but also from error handling
-            boolean useUDP = getPreferUDP() && useUdpEntry.isEnabled();
-            useBridges.setEnabled(!useUDP);
-            useBridges.setSubtitle(getString(useUDP ? R.string.disabled_while_udp_on : R.string.nav_drawer_subtitle_obfuscated_connection));
-        } else {
-            useBridges.setVisibility(GONE);
-        }
+            }
+        });
+
+        //We check the UI state of the useUdpEntry here as well, in order to avoid a situation
+        //where both entries are disabled, because both preferences are enabled.
+        //bridges can be enabled not only from here but also from error handling
+        boolean useUDP = getPreferUDP() && useUdpEntry.isEnabled();
+        automaticCircumvention.setEnabled(!useUDP);
+        automaticCircumvention.setSubtitle(getString(useUDP ? R.string.disabled_while_udp_on : R.string.automatic_bridge_description));
     }
 
-    private void initUseSnowflakeEntry(View rootView) {
-        IconSwitchEntry useSnowflake = rootView.findViewById(R.id.snowflake_switch);
-        useSnowflake.setVisibility(VISIBLE);
-        useSnowflake.setChecked(hasSnowflakePrefs() && getUseSnowflake());
-        useSnowflake.setOnCheckedChangeListener((buttonView, isChecked) -> {
+    private void initManualCircumventionEntry(View rootView) {
+        LinearLayout manualConfigRoot = rootView.findViewById(R.id.bridge_manual_switch_entry);
+        manualConfigRoot.setVisibility(ProviderObservable.getInstance().getCurrentProvider().supportsPluggableTransports() ? VISIBLE : GONE);
+        IconTextEntry manualConfiguration = rootView.findViewById(R.id.bridge_manual_switch);
+        SwitchCompat manualConfigurationSwitch = rootView.findViewById(R.id.bridge_manual_switch_control);
+        boolean useManualCircumventionSettings = useManualBridgeSettings() || useManualDiscoverySettings();
+        manualConfigurationSwitch.setChecked(useManualCircumventionSettings);
+        manualConfigurationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (!buttonView.isPressed()) {
                 return;
             }
-            useSnowflake(isChecked);
+            resetManualConfig();
+            if (!useManualCircumventionSettings){
+                openManualConfigurationFragment();
+            }
         });
+        manualConfiguration.setOnClickListener((buttonView) -> openManualConfigurationFragment());
+
+        //We check the UI state of the useUdpEntry here as well, in order to avoid a situation
+        //where both entries are disabled, because both preferences are enabled.
+        //bridges can be enabled not only from here but also from error handling
+        boolean useUDP = getPreferUDP() && useUdpEntry.isEnabled();
+        manualConfiguration.setEnabled(!useUDP);
+        manualConfigurationSwitch.setVisibility(useUDP ? GONE : VISIBLE);
+        manualConfiguration.setSubtitle(getString(useUDP ? R.string.disabled_while_udp_on : R.string.manual_bridge_description));
+    }
+
+    private void resetManualConfig() {
+        useSnowflake(false);
+        setUseTunnel(TUNNELING_AUTOMATICALLY);
+        setUsePortHopping(false);
+        useBridges(false);
+        if (VpnStatus.isVPNActive()) {
+            EipCommand.startVPN(getContext(), false);
+            Toast.makeText(getContext(), R.string.reconnecting, Toast.LENGTH_LONG).show();
+        }
+        View rootView = getView();
+        if (rootView == null)  {
+            return;
+        }
+        initAutomaticCircumventionEntry(rootView);
+    }
+
+    private void openManualConfigurationFragment() {
+        FragmentManagerEnhanced fragmentManager = new FragmentManagerEnhanced(getActivity().getSupportFragmentManager());
+        Fragment fragment = CensorshipCircumventionFragment.newInstance();
+        fragmentManager.replace(R.id.main_container, fragment, MainActivity.TAG);
+    }
+
+    @Override
+    public void onDestroy() {
+        PreferenceHelper.unregisterOnSharedPreferenceChangeListener(this);
+        super.onDestroy();
     }
 
     private void initAlwaysOnVpnEntry(View rootView) {
@@ -225,7 +276,7 @@ public class SettingsFragment extends Fragment implements SharedPreferences.OnSh
 
     private void initGatewayPinningEntry(View rootView) {
         IconTextEntry gatewayPinning = rootView.findViewById(R.id.gateway_pinning);
-        if (!BuildConfig.BUILD_TYPE.equals("debug")) {
+        if (!BuildConfig.DEBUG_MODE) {
             gatewayPinning.setVisibility(GONE);
             return;
         }
@@ -261,7 +312,7 @@ public class SettingsFragment extends Fragment implements SharedPreferences.OnSh
 
     public void initObfuscationPinningEntry(View rootView) {
         IconSwitchEntry obfuscationPinning = rootView.findViewById(R.id.obfuscation_proxy_pinning);
-        if (!BuildConfig.BUILD_TYPE.equals("debug") || !useObfsVpn()) {
+        if (!BuildConfig.DEBUG_MODE) {
             obfuscationPinning.setVisibility(GONE);
             return;
         }
@@ -302,7 +353,7 @@ public class SettingsFragment extends Fragment implements SharedPreferences.OnSh
 
     public void initExperimentalTransportsEntry(View rootView) {
         IconSwitchEntry experimentalTransports = rootView.findViewById(R.id.experimental_transports);
-        if (useObfsVpn() && ProviderObservable.getInstance().getCurrentProvider().supportsExperimentalPluggableTransports()) {
+        if (ProviderObservable.getInstance().getCurrentProvider().supportsExperimentalPluggableTransports()) {
             experimentalTransports.setVisibility(VISIBLE);
             experimentalTransports.setChecked(allowExperimentalTransports());
             experimentalTransports.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -351,8 +402,9 @@ public class SettingsFragment extends Fragment implements SharedPreferences.OnSh
             return;
         }
         if (key.equals(USE_BRIDGES) || key.equals(PREFER_UDP)) {
-            initUseBridgesEntry(rootView);
             initPreferUDPEntry(rootView);
+            initManualCircumventionEntry(rootView);
+            initAutomaticCircumventionEntry(rootView);
         } else if (key.equals(USE_IPv6_FIREWALL)) {
             initFirewallEntry(getView());
         } else if (key.equals(GATEWAY_PINNING)) {

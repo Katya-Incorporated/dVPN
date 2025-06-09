@@ -5,11 +5,11 @@
 
 package de.blinkt.openvpn.core;
 
+import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED;
 import static de.blinkt.openvpn.core.ConnectionStatus.LEVEL_CONNECTED;
 import static de.blinkt.openvpn.core.ConnectionStatus.LEVEL_WAITING_FOR_USER_INPUT;
 import static de.blinkt.openvpn.core.NetworkSpace.IpAddress;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_PROFILE;
-import static se.leap.bitmaskclient.base.utils.BuildConfigHelper.useObfsVpn;
 
 import android.Manifest.permission;
 import android.app.Notification;
@@ -33,6 +33,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
+import androidx.core.app.ServiceCompat;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -51,9 +52,7 @@ import se.leap.bitmaskclient.R;
 import se.leap.bitmaskclient.eip.EipStatus;
 import se.leap.bitmaskclient.eip.VpnNotificationManager;
 import se.leap.bitmaskclient.firewall.FirewallManager;
-import se.leap.bitmaskclient.pluggableTransports.PtClientBuilder;
-import se.leap.bitmaskclient.pluggableTransports.PtClientInterface;
-import se.leap.bitmaskclient.pluggableTransports.ShapeshifterClient;
+import se.leap.bitmaskclient.pluggableTransports.ObfsvpnClient;
 
 
 public class OpenVPNService extends VpnService implements StateListener, Callback, ByteCountListener, IOpenVPNServiceInternal, VpnNotificationManager.VpnServiceCallback {
@@ -89,8 +88,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     private Toast mlastToast;
     private Runnable mOpenVPNThread;
     private VpnNotificationManager notificationManager;
-    private ShapeshifterClient shapeshifter;
-    private PtClientInterface obfsVpnClient;
+    private ObfsvpnClient obfsVpnClient;
     private FirewallManager firewallManager;
 
     private final IBinder mBinder = new IOpenVPNServiceInternal.Stub() {
@@ -184,8 +182,10 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         synchronized (mProcessLock) {
             mProcessThread = null;
         }
+        stopObfsvpn();
         VpnStatus.removeByteCountListener(this);
-        unregisterDeviceStateReceiver();
+        unregisterDeviceStateReceiver(mDeviceStateReceiver);
+        mDeviceStateReceiver = null;
         mOpenVPNThread = null;
         if (!mStarting) {
             stopForeground(!mNotificationAlwaysVisible);
@@ -198,35 +198,31 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         firewallManager.stop();
     }
 
-    synchronized void registerDeviceStateReceiver(OpenVPNManagement magnagement) {
+    synchronized void registerDeviceStateReceiver(DeviceStateReceiver newDeviceStateReceiver) {
         // Registers BroadcastReceiver to track network connection changes.
         IntentFilter filter = new IntentFilter();
         filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
         filter.addAction(Intent.ACTION_SCREEN_OFF);
         filter.addAction(Intent.ACTION_SCREEN_ON);
-        mDeviceStateReceiver = new DeviceStateReceiver(magnagement);
 
         // Fetch initial network state
-        mDeviceStateReceiver.networkStateChange(this);
+        newDeviceStateReceiver.networkStateChange(this);
 
-        registerReceiver(mDeviceStateReceiver, filter);
-        VpnStatus.addByteCountListener(mDeviceStateReceiver);
-
+        registerReceiver(newDeviceStateReceiver, filter);
+        VpnStatus.addByteCountListener(newDeviceStateReceiver);
     }
 
-    synchronized void unregisterDeviceStateReceiver() {
+    synchronized void unregisterDeviceStateReceiver(DeviceStateReceiver deviceStateReceiver) {
         if (mDeviceStateReceiver != null)
             try {
-                VpnStatus.removeByteCountListener(mDeviceStateReceiver);
-                this.unregisterReceiver(mDeviceStateReceiver);
+                VpnStatus.removeByteCountListener(deviceStateReceiver);
+                this.unregisterReceiver(deviceStateReceiver);
             } catch (IllegalArgumentException iae) {
                 // I don't know why  this happens:
                 // java.lang.IllegalArgumentException: Receiver not registered: de.blinkt.openvpn.NetworkSateReceiver@41a61a10
                 // Ignore for now ...
                 iae.printStackTrace();
             }
-        mDeviceStateReceiver = null;
-
     }
 
     @Override
@@ -235,18 +231,20 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
             mDeviceStateReceiver.userPause(shouldBePaused);
     }
 
+    private boolean stopObfsvpn() {
+        if (obfsVpnClient == null || !obfsVpnClient.isStarted()) {
+            return true;
+        }
+        boolean success = obfsVpnClient.stop();
+        obfsVpnClient = null;
+        return success;
+    }
     @Override
     public boolean stopVPN(boolean replaceConnection) {
+        stopObfsvpn();
         if(isVpnRunning()) {
             if (getManagement() != null && getManagement().stopVPN(replaceConnection)) {
                 if (!replaceConnection) {
-                    if (shapeshifter != null) {
-                        shapeshifter.stop();
-                        shapeshifter = null;
-                    } else if (obfsVpnClient != null && obfsVpnClient.isStarted()) {
-                        obfsVpnClient.stop();
-                        obfsVpnClient = null;
-                    }
                     VpnStatus.updateStateString("NOPROCESS", "VPN STOPPED", R.string.state_noprocess, ConnectionStatus.LEVEL_NOTCONNECTED);
                 }
                 return true;
@@ -377,24 +375,53 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     }
 
     private void startOpenVPN() {
-        //TODO: investigate how connections[n] with n>0 get called during vpn setup (on connection refused?)
-        // Do we need to check if there's any obfs4 connection in mProfile.mConnections and start
-        // the dispatcher here? Can we start the dispatcher at a later point of execution, e.g. when
-        // connections[n], n>0 gets choosen?
-
         Connection connection = mProfile.mConnections[0];
         VpnStatus.setCurrentlyConnectingProfile(mProfile);
 
+        // stop old running obfsvpn client
+        if (!stopObfsvpn()) {
+            VpnStatus.logError("Failed to stop already running obfsvpn client");
+            endVpnService();
+            VpnStatus.updateStateString("NOPROCESS", "VPN STOPPED", R.string.state_noprocess, ConnectionStatus.LEVEL_NOTCONNECTED);
+            return;
+        }
+
+        // Set a flag that we are starting a new VPN
+        mStarting = true;
+        // Stop the previous session by interrupting the thread.
+        stopOldOpenVPNProcess();
+        // An old running VPN should now be exited
+        mStarting = false;
+
+        // optionally start start obfsvpn and adapt openvpn config to the port obfsvpn is listening to
+        Connection.TransportType transportType = connection.getTransportType();
+        if (mProfile.usePluggableTransports() && transportType.isPluggableTransport()) {
+            try {
+                obfsVpnClient = new ObfsvpnClient(((Obfs4Connection) connection).getObfs4Options());
+                obfsVpnClient.start();
+                int port = obfsVpnClient.getPort();
+                connection.setServerPort(String.valueOf(port));
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+                VpnStatus.logException(e);
+                endVpnService();
+                VpnStatus.updateStateString("NOPROCESS", "VPN STOPPED", R.string.state_noprocess, ConnectionStatus.LEVEL_NOTCONNECTED);
+                return;
+            }
+        }
+
+        // write openvpn config
         VpnStatus.logInfo(R.string.building_configration);
         VpnStatus.updateStateString("VPN_GENERATE_CONFIG", "", R.string.building_configration, ConnectionStatus.LEVEL_START);
-
         try {
             mProfile.writeConfigFile(this);
         } catch (IOException e) {
             VpnStatus.logException("Error writing config file", e);
             endVpnService();
+            VpnStatus.updateStateString("NOPROCESS", "VPN STOPPED", R.string.state_noprocess, ConnectionStatus.LEVEL_NOTCONNECTED);
             return;
         }
+
         String nativeLibraryDirectory = getApplicationInfo().nativeLibraryDir;
         String tmpDir;
         try {
@@ -406,31 +433,6 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
         // Write OpenVPN binary
         String[] argv = VPNLaunchHelper.buildOpenvpnArgv(this);
-
-
-        // Set a flag that we are starting a new VPN
-        mStarting = true;
-        // Stop the previous session by interrupting the thread.
-
-        stopOldOpenVPNProcess();
-        // An old running VPN should now be exited
-        mStarting = false;
-        Connection.TransportType transportType = connection.getTransportType();
-        if (mProfile.usePluggableTransports() && transportType.isPluggableTransport()) {
-            if (useObfsVpn()) {
-                if (obfsVpnClient != null && obfsVpnClient.isStarted()) {
-                    obfsVpnClient.stop();
-                }
-                obfsVpnClient = PtClientBuilder.getPtClient(connection);
-                int runningSocksPort = obfsVpnClient.start();
-                if (connection.getTransportType() == Connection.TransportType.OBFS4) {
-                    connection.setProxyPort(String.valueOf(runningSocksPort));
-                }
-            } else if (shapeshifter == null) {
-                shapeshifter = new ShapeshifterClient(((Obfs4Connection) connection).getObfs4Options());
-                shapeshifter.start();
-            }
-        }
 
         // Start a new session by creating a new thread.
         boolean useOpenVPN3 = VpnProfile.doUseOpenVPN3(this);
@@ -467,14 +469,16 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
             mProcessThread.start();
         }
 
-        new Handler(getMainLooper()).post(() -> {
-                    if (mDeviceStateReceiver != null) {
-                        unregisterDeviceStateReceiver();
-                    }
-                    registerDeviceStateReceiver(mManagement);
-                }
+        final DeviceStateReceiver oldDeviceStateReceiver = mDeviceStateReceiver;
+        final DeviceStateReceiver newDeviceStateReceiver = new DeviceStateReceiver(mManagement);
 
-        );
+        guiHandler.post(() -> {
+            if (oldDeviceStateReceiver != null)
+                unregisterDeviceStateReceiver(oldDeviceStateReceiver);
+
+            registerDeviceStateReceiver(newDeviceStateReceiver);
+            mDeviceStateReceiver = newDeviceStateReceiver;
+        });
     }
 
     private void stopOldOpenVPNProcess() {
@@ -483,16 +487,6 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
             if (mOpenVPNThread != null)
                 ((OpenVPNThread) mOpenVPNThread).setReplaceConnection();
             if (mManagement.stopVPN(true)) {
-                // an old was asked to exit, wait 1s
-                if (shapeshifter != null) {
-                    Log.d(TAG, "-> stop shapeshifter");
-                    shapeshifter.stop();
-                    shapeshifter = null;
-                } else if (obfsVpnClient != null && obfsVpnClient.isStarted()) {
-                    Log.d(TAG, "-> stop obfsvpnClient");
-                    obfsVpnClient.stop();
-                    obfsVpnClient = null;
-                }
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
@@ -536,6 +530,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     @Override
     public void onCreate() {
         super.onCreate();
+        guiHandler = new Handler(getMainLooper());
         notificationManager = new VpnNotificationManager(this);
         firewallManager = new FirewallManager(this, true);
     }
@@ -1098,7 +1093,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
     @Override
     public void onNotificationBuild(int notificationId, Notification notification) {
-        startForeground(notificationId, notification);
+        ServiceCompat.startForeground(this, notificationId, notification, FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED);
     }
 
     public void trigger_url_open(String info) {

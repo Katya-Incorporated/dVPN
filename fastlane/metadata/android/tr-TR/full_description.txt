@@ -1,0 +1,11 @@
+CalyxVPN ile tüm ağ trafiğinizi güvenle şifreleyebilir ve Calyx Enstitüsü üzerinden yönlendirebilirsiniz.
+
+- Anonim VPN: Kullanıcı hesabı ve günlük kaydı yok.
+- Anonim IP Adresi: VPN bağlantısı etkin olduğunda, internetteki tüm sunucular sizi Calyx tarafından barındırılan anonim bir IP adresinden geliyor olarak görecektir.
+- Ücretsiz: Bu, Calyx Enstitüsü tarafından sağlanan ücretsiz bir hizmettir.
+- Açık Kaynaklı: Hem istemci hem de sunucu %100 özgür ve açık kaynak kodlu yazılımlardır.
+- IPv6 Sızıntısı Yok: CalyxVPN IPv6 trafiğini sızdırmaz (root gerektirir).
+- DNS Sızıntısı Yok: CalyxVPN, DNS sızıntısını önlemek için hem istemci hem de sunucu üzerinde yapılandırılmıştır. VPN açıkken tüm DNS istekleri Calyx tarafından anonim olarak işlenir.
+- Atlatma: "Köprüleri Kullan" seçeneği etkinleştirildiğinde, VPN trafiğini engelleyen bazı sansür sistemlerini atlatmak için tüm trafiğiniz normal web trafiği olarak gizlenir.
+
+Tüm VPN'lerde olduğu gibi, CalyxVPN yalnızca ağ üzerinden akarken verilerinize güvenlik ekler. Depolanan veya bir web sitesine verdiğiniz verilerinizin içeriğini koruyamaz. Ayrıca uygulamalarınızdaki veya web tarayıcınızdaki reklamları ve izlemeyi de engellemez (bu izlemenin IP adresinize dayalı olduğu durumlar hariç).

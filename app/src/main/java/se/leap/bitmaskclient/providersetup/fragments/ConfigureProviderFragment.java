@@ -4,13 +4,19 @@ import static android.app.Activity.RESULT_CANCELED;
 import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 import static androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE;
+import static se.leap.bitmaskclient.R.string.app_name;
 import static se.leap.bitmaskclient.R.string.description_configure_provider;
 import static se.leap.bitmaskclient.R.string.description_configure_provider_circumvention;
+import static se.leap.bitmaskclient.base.fragments.CensorshipCircumventionFragment.TUNNELING_AUTOMATICALLY;
 import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_CODE;
 import static se.leap.bitmaskclient.base.models.Constants.BROADCAST_RESULT_KEY;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_KEY;
 import static se.leap.bitmaskclient.base.utils.BuildConfigHelper.isDefaultBitmask;
 import static se.leap.bitmaskclient.base.utils.PreferenceHelper.getUseSnowflake;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.hasSnowflakePrefs;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.setUsePortHopping;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.setUseTunnel;
+import static se.leap.bitmaskclient.base.utils.PreferenceHelper.useSnowflake;
 import static se.leap.bitmaskclient.base.utils.ViewHelper.animateContainerVisibility;
 import static se.leap.bitmaskclient.providersetup.ProviderAPI.CORRECTLY_DOWNLOADED_VPN_CERTIFICATE;
 import static se.leap.bitmaskclient.providersetup.ProviderAPI.DOWNLOAD_VPN_CERTIFICATE;
@@ -39,6 +45,7 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.core.os.BundleCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -46,8 +53,11 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.List;
 
+import de.blinkt.openvpn.core.VpnStatus;
 import se.leap.bitmaskclient.R;
+import se.leap.bitmaskclient.base.models.Constants;
 import se.leap.bitmaskclient.base.models.Provider;
+import se.leap.bitmaskclient.base.utils.PreferenceHelper;
 import se.leap.bitmaskclient.databinding.FConfigureProviderBinding;
 import se.leap.bitmaskclient.eip.EipSetupListener;
 import se.leap.bitmaskclient.eip.EipSetupObserver;
@@ -86,7 +96,7 @@ public class ConfigureProviderFragment extends BaseSetupFragment implements Prop
                              @Nullable Bundle savedInstanceState) {
         binding = FConfigureProviderBinding.inflate(inflater, container, false);
         binding.detailContainer.setVisibility(getUseSnowflake() ? VISIBLE : GONE);
-        binding.tvCircumventionDescription.setText(getUseSnowflake() ? description_configure_provider_circumvention : description_configure_provider);
+        binding.tvCircumventionDescription.setText(getUseSnowflake() ? getString(description_configure_provider_circumvention, getString(app_name)) : getString(description_configure_provider, getString(app_name)));
         binding.detailHeaderContainer.setOnClickListener(v -> {
             binding.ivExpand.animate().setDuration(250).rotation(isExpanded ? -90 : 0);
             showConnectionDetails();
@@ -122,8 +132,8 @@ public class ConfigureProviderFragment extends BaseSetupFragment implements Prop
     public void onFragmentSelected() {
         super.onFragmentSelected();
         ignoreProviderAPIUpdates = false;
-        binding.detailContainer.setVisibility(getUseSnowflake() ? VISIBLE : GONE);
-        binding.tvCircumventionDescription.setText(getUseSnowflake() ? description_configure_provider_circumvention : description_configure_provider);
+        binding.detailContainer.setVisibility(!VpnStatus.isVPNActive() && hasSnowflakePrefs() && getUseSnowflake() ? VISIBLE : GONE);
+        binding.tvCircumventionDescription.setText(getUseSnowflake() ? getString(description_configure_provider_circumvention, getString(app_name)) : getString(description_configure_provider, getString(app_name)));
         if (!isDefaultBitmask()) {
             Drawable drawable = ResourcesCompat.getDrawable(getResources(), R.drawable.setup_progress_spinner, null);
             binding.progressSpinner.setAnimatedSpinnerDrawable(drawable);
@@ -131,8 +141,22 @@ public class ConfigureProviderFragment extends BaseSetupFragment implements Prop
         binding.progressSpinner.update(ProviderSetupObservable.getProgress());
         setupActivityCallback.setNavigationButtonHidden(true);
         setupActivityCallback.setCancelButtonHidden(false);
-        ProviderSetupObservable.startSetup();
-        ProviderAPICommand.execute(getContext(), SET_UP_PROVIDER, setupActivityCallback.getSelectedProvider());
+        if (ProviderSetupObservable.isSetupRunning()) {
+            handleResult(ProviderSetupObservable.getResultCode(), ProviderSetupObservable.getResultData(), true);
+        } else {
+            Provider provider = setupActivityCallback.getSelectedProvider();
+            if (provider != null && provider.hasIntroducer()) {
+                // enable automatic selection of bridges
+                useSnowflake(false);
+                setUseTunnel(TUNNELING_AUTOMATICALLY);
+                setUsePortHopping(false);
+                PreferenceHelper.useBridges(true);
+            }
+            ProviderSetupObservable.startSetup();
+            Bundle parameters = new Bundle();
+            parameters.putString(Constants.COUNTRYCODE, PreferenceHelper.getBaseCountry());
+            ProviderAPICommand.execute(getContext(), SET_UP_PROVIDER, parameters, setupActivityCallback.getSelectedProvider());
+        }
     }
 
     protected void showConnectionDetails() {
@@ -202,31 +226,35 @@ public class ConfigureProviderFragment extends BaseSetupFragment implements Prop
         if (resultData == null) {
             resultData = Bundle.EMPTY;
         }
-        Provider provider = resultData.getParcelable(PROVIDER_KEY);
+       handleResult(resultCode, resultData, false);
+    }
+
+    private void handleResult(int resultCode, Bundle resultData, boolean resumeSetup) {
+        Provider provider = BundleCompat.getParcelable(resultData, PROVIDER_KEY, Provider.class);
+
         if (ignoreProviderAPIUpdates ||
                 provider == null ||
                 (setupActivityCallback.getSelectedProvider() != null &&
-                !setupActivityCallback.getSelectedProvider().getMainUrlString().equals(provider.getMainUrlString()))) {
+                        !setupActivityCallback.getSelectedProvider().getMainUrl().equals(provider.getMainUrl()))) {
             return;
         }
 
         switch (resultCode) {
             case PROVIDER_OK:
-                if (provider.allowsAnonymous()) {
-                    ProviderAPICommand.execute(this.getContext(), DOWNLOAD_VPN_CERTIFICATE, provider);
+                setupActivityCallback.onProviderSelected(provider);
+                if (provider.getApiVersion() < 5) {
+                    if (provider.allowsAnonymous()) {
+                        ProviderAPICommand.execute(this.getContext(), DOWNLOAD_VPN_CERTIFICATE, provider);
+                    } else {
+                        // TODO: implement error message that this client only supports anonymous usage
+                    }
                 } else {
-                    // TODO: implement error message that this client only supports anonymous usage
+                    sendSuccess(resumeSetup);
                 }
                 break;
             case CORRECTLY_DOWNLOADED_VPN_CERTIFICATE:
                 setupActivityCallback.onProviderSelected(provider);
-                handler.postDelayed(() -> {
-                    if (!ProviderSetupObservable.isCanceled()) {
-                        if (setupActivityCallback != null) {
-                            setupActivityCallback.onConfigurationSuccess();
-                        }
-                    }
-                }, 750);
+                sendSuccess(resumeSetup);
                 break;
             case PROVIDER_NOK:
             case INCORRECTLY_DOWNLOADED_VPN_CERTIFICATE:
@@ -240,4 +268,15 @@ public class ConfigureProviderFragment extends BaseSetupFragment implements Prop
         }
     }
 
+    private void sendSuccess(boolean resumeSetup) {
+        handler.postDelayed(() -> {
+            if (!ProviderSetupObservable.isCanceled()) {
+                try {
+                    setupActivityCallback.onConfigurationSuccess();
+                } catch (NullPointerException npe) {
+                    // callback disappeared in the meanwhile
+                }
+            }
+        }, resumeSetup ? 0 : 750);
+    }
 }

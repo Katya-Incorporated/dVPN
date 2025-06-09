@@ -21,6 +21,8 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.os.Build;
 import android.os.Looper;
+import android.util.Patterns;
+import android.webkit.URLUtil;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -34,6 +36,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -119,6 +122,36 @@ public class ConfigHelper {
         return null;
     }
 
+    public static String parseX509CertificatesToString(ArrayList<X509Certificate> certs) {
+        StringBuilder sb = new StringBuilder();
+        for (X509Certificate certificate : certs) {
+
+            byte[] derCert = new byte[0];
+            try {
+                derCert = certificate.getEncoded();
+                byte[] encodedCert = Base64.encode(derCert);
+                String base64Cert = new String(encodedCert);
+
+                // add cert header
+                sb.append("-----BEGIN CERTIFICATE-----\n");
+
+                // split base64 string into lines of 64 characters
+                int index = 0;
+                while (index < base64Cert.length()) {
+                    sb.append(base64Cert.substring(index, Math.min(index + 64, base64Cert.length())))
+                            .append("\n");
+                    index += 64;
+                }
+
+                // add cert footer
+                sb.append("-----END CERTIFICATE-----\n");
+            } catch (CertificateEncodingException e) {
+                e.printStackTrace();
+            }
+        }
+        return sb.toString().trim();
+    }
+
     public static void ensureNotOnMainThread(@NonNull Context context) throws IllegalStateException{
         Looper looper = Looper.myLooper();
         if (looper != null && looper == context.getMainLooper()) {
@@ -190,8 +223,28 @@ public class ConfigHelper {
         return matcher.matches();
     }
 
-    public static String getDomainFromMainURL(@NonNull String mainUrl) throws NullPointerException {
-        return PublicSuffixDatabase.Companion.get().getEffectiveTldPlusOne(mainUrl).replaceFirst("http[s]?://", "").replaceFirst("/.*", "");
+    public static boolean isNetworkUrl(String url) {
+        return url != null && URLUtil.isNetworkUrl(url)
+                && URLUtil.isHttpsUrl(url)
+                && Patterns.WEB_URL.matcher(url).matches();
+    }
+
+    public static boolean isDomainName(String url) {
+        return url != null && Patterns.DOMAIN_NAME.matcher(url).matches();
+    }
+
+    /**
+     * Extracts a domain from a given URL
+     * @param mainUrl URL as String
+     * @return Domain as String, null if mainUrl is an invalid URL
+     */
+    public static String getDomainFromMainURL(String mainUrl) {
+        try {
+            String topLevelDomain = PublicSuffixDatabase.Companion.get().getEffectiveTldPlusOne(mainUrl);
+            return topLevelDomain.replaceFirst("http[s]?://", "").replaceFirst("/.*", "");
+        } catch (NullPointerException | IllegalArgumentException e) {
+            return null;
+        }
     }
     
     public static boolean isCalyxOSWithTetheringSupport(Context context) {

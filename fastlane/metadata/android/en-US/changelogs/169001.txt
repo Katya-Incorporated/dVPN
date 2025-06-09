@@ -1,0 +1,3 @@
+• Based on Bitmask v1.1.8
+• New CA certificate
+• Translation updates

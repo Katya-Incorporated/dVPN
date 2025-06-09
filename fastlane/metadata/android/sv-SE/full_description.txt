@@ -1,0 +1,11 @@
+Med Calyx VPN kan du säkert kryptera all din nätverkstrafik och leda om den genom The Calyx Institute.
+
+• Anonym VPN: Inga användarkonton och ingen loggning.
+• Anonym IP-adress: När VPN-uppkopplingen är aktiv kommer alla servrar på internet att se det som om du kommer från ett anonymt IP med Calyx som värd.
+• Gratis: Detta är en gratis tjänst som tillhandahålls av The Calyx Institute.
+• Öppen källkod: Både klienten och servern är 100% fri och öppen källkod.
+• Inga IPv6-läckor: CalyxVPN kommer inte läcka IPv6-trafik (kräver root).
+• Inga DNS-läckor: CalyxVPN är konfigurerad på både klient och server att förhindra att några DNS-läckor sker. Alla DNS-förfrågningar hanteras anonymt av Calyx när VPN är påslagen.
+• Kringgående: När alternativet "Använd bryggor" är aktiverad är all din webbtrafik gömd som normal webbtrafik för att kringgå viss censursystem som blockerar VPN-trafik.
+
+Som med alla VPN-tjänster lägger CalyxVPN endast till säkerhet för din data när det går genom nätverket. Det kan inte skydda innehållet i din data som lagras eller som du ger till en webbsida. Det förhindrar inte reklam eller spårning i dina appar eller webbläsare (förutom när denna spårning är baserad på din IP-adress).

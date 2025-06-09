@@ -1,0 +1,11 @@
+Dengan CalyxVPN, Anda dapat mengenkripsi serta mengarahkan semua lalu lintas jaringan internet melalui Institut Calyx (Calyx Institute) secara aman
+
+• VPN Anonim: Anda tidak perlu akun dan tidak perlu masuk log.
+• Alamat IP Anonim: ketika sambungan VPN sedang aktif, semua server internet akan melihat Anda seolah Anda berasal dari IP anonim yang dihos oleh Calyx.
+• Gratis: Layanan ini disediakan oleh Institut Calyx secara gratis.
+• Bersumber Terbuka: klien dan server sama-sama merupakan perangkat lunak terbuka dan 100% gratis.
+• Tanpa Kebocoran IPv6: CalyxVPN tidak akan membocorkan lalin IPv6 (butuh akses root).
+• Tanpa Kebocoran DNS: CalyxVPN dikonfigurasi pada klien dan server untuk mencegah adanya kebocoran DNS. Semua permohonan DNS ditangani secara anonim oleh Calyx ketika VPN diaktifkan.
+• Pengelitan (circumvention): Ketika pilihan "Gunakan Sirat" dinyalakan, semua lalin jaringan disembunyikan untuk mengelit sistem penyensoran yang memblokir lalin VPN.
+
+Layaknya VPN lain, CalyxVPN hanga menambah keamanan data yang berpindah di sepanjang jaringan internet Anda. VPN tidak dapat melindungi isi data tersimpan atau yang diberikan kepada suatu laman web. VPN juga tidak dapat mencegah munculnya iklan dan sistem pelacak di aplikasi atau peramban web Anda (kecuali jika peleaxakan ini dilakukan berdasarkan alamat IP Anda).

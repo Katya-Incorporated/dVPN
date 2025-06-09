@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="terms_of_service_calyx">このアプリケーションを使用することにより、利用規約 ( https://calyxinstitute.org/legal/terms-of-service ) に同意したことになります。このサービスは、世界をより良い場所にするために活動している人を対象にしており、保証なしで現状のまま提供されています。</string>
+    <string name="donate_message_calyx">Calyx VPN は、The Calyx Institute が提供する簡単、高速、安全な VPN サービスです。https://calyxinstitute.org では、このアプリの詳細と寄付の方法を案内しています。</string>
+</resources>

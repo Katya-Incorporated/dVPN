@@ -11,6 +11,11 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED"
+        android:minSdkVersion="34" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
+        android:minSdkVersion="34" />
+
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" /> <!-- Used to show all apps in the allowed Apps selection -->
@@ -26,16 +31,33 @@
         android:extractNativeLibs="true"
         android:appCategory="productivity"
         android:logo="@mipmap/ic_launcher"
-        android:theme="@style/BitmaskTheme">
+        android:theme="@style/BitmaskTheme"
+        android:localeConfig="@xml/locales_config">
         <activity
             android:name=".providersetup.activities.SetupActivity"
             android:launchMode="singleInstance"
             android:screenOrientation="portrait"
             android:exported="false" />
 
+        <activity-alias
+            android:exported="true"
+            android:name=".InviteCodeActivity"
+            android:targetActivity=".providersetup.activities.SetupActivity">
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="obfsvpnintro" />
+            </intent-filter>
+        </activity-alias>
+
         <service
             android:name="de.blinkt.openvpn.core.OpenVPNService"
             android:exported="false"
+            android:foregroundServiceType="systemExempted"
             android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
@@ -44,6 +66,7 @@
         <service
             android:name=".eip.VoidVpnService"
             android:exported="false"
+            android:foregroundServiceType="systemExempted"
             android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
@@ -88,6 +111,11 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
         </activity>
+
+        <activity android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="portrait"
+            tools:replace="screenOrientation" />
+
         <activity
             android:name=".base.MainActivity"
             android:label="@string/app_name"
@@ -114,6 +142,15 @@
                 android:name="android.service.quicksettings.ACTIVE_TILE"
                 android:value="false" />
         </service>
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
+
     </application>
 
 </manifest>

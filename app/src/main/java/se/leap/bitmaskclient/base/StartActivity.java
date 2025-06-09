@@ -51,6 +51,7 @@ import se.leap.bitmaskclient.base.models.ProviderObservable;
 import se.leap.bitmaskclient.base.utils.DateHelper;
 import se.leap.bitmaskclient.base.utils.PreferenceHelper;
 import se.leap.bitmaskclient.eip.EipCommand;
+import se.leap.bitmaskclient.providersetup.ProviderSetupObservable;
 import se.leap.bitmaskclient.providersetup.activities.SetupActivity;
 
 /**
@@ -178,9 +179,10 @@ public class StartActivity extends Activity{
         if ((hasNewFeature(FeatureVersionCode.CALYX_PROVIDER_LILYPAD_UPDATE) && (
                 getPackageName().equals("org.calyxinstitute.vpn") ||
                         ProviderObservable.getInstance().getCurrentProvider().getDomain().equals("calyx.net"))) ||
-            hasNewFeature(FeatureVersionCode.RISEUP_PROVIDER_LILYPAD_UPDATE) && (
+                (hasNewFeature(FeatureVersionCode.RISEUP_PROVIDER_LILYPAD_UPDATE) || hasNewFeature(FeatureVersionCode.RISEUP_PROVIDER_LILYPAD_UPDATE_v2)
+                        && (
                     getPackageName().equals("se.leap.riseupvpn") ||
-                            ProviderObservable.getInstance().getCurrentProvider().getDomain().equals("riseup.net"))) {
+                            ProviderObservable.getInstance().getCurrentProvider().getDomain().equals("riseup.net")))) {
             // deletion of current configured provider so that a new provider setup is triggered
             Provider provider = ProviderObservable.getInstance().getCurrentProvider();
             if (provider != null && !provider.isDefault()) {
@@ -267,6 +269,7 @@ public class StartActivity extends Activity{
     }
 
     private void showNextActivity(Provider provider) {
+        ProviderSetupObservable.cancel();
         if (provider.shouldShowMotdSeen()) {
             try {
                 IMessages messages = Motd.newMessages(provider.getMotdJsonString());

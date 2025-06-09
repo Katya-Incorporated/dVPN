@@ -54,7 +54,7 @@ public class AboutFragment extends Fragment {
     }
 
     private int getTermsOfServiceResource() {
-        return this.getContext().getResources().getIdentifier("terms_of_service", "string", this.getContext().getPackageName());
+        return this.getContext().getResources().getIdentifier("terms_of_service_calyx", "string", this.getContext().getPackageName());
     }
 
 }

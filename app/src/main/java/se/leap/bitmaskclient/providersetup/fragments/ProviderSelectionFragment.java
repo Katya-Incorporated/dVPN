@@ -1,8 +1,8 @@
 package se.leap.bitmaskclient.providersetup.fragments;
 
 import static se.leap.bitmaskclient.providersetup.fragments.viewmodel.ProviderSelectionViewModel.ADD_PROVIDER;
+import static se.leap.bitmaskclient.providersetup.fragments.viewmodel.ProviderSelectionViewModel.INVITE_CODE_PROVIDER;
 
-import android.content.Context;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.Editable;
@@ -16,23 +16,27 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 
 import se.leap.bitmaskclient.R;
+import se.leap.bitmaskclient.base.models.Introducer;
 import se.leap.bitmaskclient.base.models.Provider;
-import se.leap.bitmaskclient.base.models.ProviderObservable;
 import se.leap.bitmaskclient.base.utils.ViewHelper;
 import se.leap.bitmaskclient.databinding.FProviderSelectionBinding;
 import se.leap.bitmaskclient.providersetup.activities.CancelCallback;
+import se.leap.bitmaskclient.providersetup.fragments.helpers.AbstractQrScannerHelper;
+import se.leap.bitmaskclient.providersetup.helpers.QrScannerHelper;
 import se.leap.bitmaskclient.providersetup.fragments.viewmodel.ProviderSelectionViewModel;
 import se.leap.bitmaskclient.providersetup.fragments.viewmodel.ProviderSelectionViewModelFactory;
 
-public class ProviderSelectionFragment extends BaseSetupFragment implements CancelCallback {
+public class ProviderSelectionFragment extends BaseSetupFragment implements CancelCallback, AbstractQrScannerHelper.ScanResultCallback {
 
     private ProviderSelectionViewModel viewModel;
     private ArrayList<RadioButton> radioButtons;
 
     private FProviderSelectionBinding binding;
+    private QrScannerHelper qrScannerHelper;
 
     public static ProviderSelectionFragment newInstance(int position) {
         ProviderSelectionFragment fragment = new ProviderSelectionFragment();
@@ -46,9 +50,10 @@ public class ProviderSelectionFragment extends BaseSetupFragment implements Canc
         super.onCreate(savedInstanceState);
         viewModel = new ViewModelProvider(this,
                 new ProviderSelectionViewModelFactory(
-                        getContext().getApplicationContext().getAssets(),
-                        getContext().getExternalFilesDir(null))).
+                        getContext().getApplicationContext().getAssets())).
                 get(ProviderSelectionViewModel.class);
+
+        qrScannerHelper = new QrScannerHelper(this, this);
     }
 
     @Override
@@ -57,6 +62,7 @@ public class ProviderSelectionFragment extends BaseSetupFragment implements Canc
         binding = FProviderSelectionBinding.inflate(inflater, container, false);
 
         radioButtons = new ArrayList<>();
+        // add configured providers
         for (int i = 0; i < viewModel.size(); i++) {
             RadioButton radioButton = new RadioButton(binding.getRoot().getContext());
             radioButton.setText(viewModel.getProviderName(i));
@@ -64,13 +70,24 @@ public class ProviderSelectionFragment extends BaseSetupFragment implements Canc
             binding.providerRadioGroup.addView(radioButton);
             radioButtons.add(radioButton);
         }
-        RadioButton radioButton = new RadioButton(binding.getRoot().getContext());
-        radioButton.setText(getText(R.string.add_provider));
-        radioButton.setId(ADD_PROVIDER);
-        binding.providerRadioGroup.addView(radioButton);
-        radioButtons.add(radioButton);
+
+        // add new provider entry
+        RadioButton addProviderRadioButton = new RadioButton(binding.getRoot().getContext());
+        addProviderRadioButton.setText(getText(R.string.add_provider));
+        addProviderRadioButton.setId(ADD_PROVIDER);
+        binding.providerRadioGroup.addView(addProviderRadioButton);
+        radioButtons.add(addProviderRadioButton);
+
+        // invite code entry
+        RadioButton inviteCodeRadioButton = new RadioButton(binding.getRoot().getContext());
+        inviteCodeRadioButton.setText(R.string.enter_invite_code);
+        inviteCodeRadioButton.setId(INVITE_CODE_PROVIDER);
+        binding.providerRadioGroup.addView(inviteCodeRadioButton);
+        radioButtons.add(inviteCodeRadioButton);
 
         binding.editCustomProvider.setVisibility(viewModel.getEditProviderVisibility());
+        binding.syntaxCheck.setVisibility(viewModel.getEditProviderVisibility());
+        binding.qrScanner.setVisibility(viewModel.getQrScannerVisibility());
         return binding.getRoot();
     }
 
@@ -78,7 +95,13 @@ public class ProviderSelectionFragment extends BaseSetupFragment implements Canc
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         setupActivityCallback.registerCancelCallback(this);
+        initQrScanner();
     }
+
+    private void initQrScanner() {
+        binding.btnQrScanner.setOnClickListener(v -> qrScannerHelper.startScan());
+    }
+
 
     @Override
     public void onFragmentSelected() {
@@ -92,11 +115,23 @@ public class ProviderSelectionFragment extends BaseSetupFragment implements Canc
             }
             binding.providerDescription.setText(viewModel.getProviderDescription(getContext()));
             binding.editCustomProvider.setVisibility(viewModel.getEditProviderVisibility());
+            binding.syntaxCheck.setVisibility(viewModel.getEditProviderVisibility());
+            binding.qrScanner.setVisibility(viewModel.getQrScannerVisibility());
+            if (viewModel.getCustomUrl() == null || viewModel.getCustomUrl().isEmpty()) {
+                binding.syntaxCheckResult.setText("");
+                binding.syntaxCheckResult.setTextColor(getResources().getColor(R.color.color_font_btn));
+                binding.editCustomProvider.setHint(viewModel.getHint(getContext()));
+            } else {
+                binding.editCustomProvider.setText("");
+            }
+            binding.editCustomProvider.setRawInputType(viewModel.getEditInputType());
+            binding.editCustomProvider.setMaxLines(viewModel.getEditInputLines());
+            binding.editCustomProvider.setMinLines(viewModel.getEditInputLines());
             setupActivityCallback.onSetupStepValidationChanged(viewModel.isValidConfig());
-            if (checkedId != ADD_PROVIDER) {
+            if (checkedId != ADD_PROVIDER && checkedId != INVITE_CODE_PROVIDER) {
                 setupActivityCallback.onProviderSelected(viewModel.getProvider(checkedId));
             } else if (viewModel.isValidConfig()) {
-                setupActivityCallback.onProviderSelected(new Provider(binding.editCustomProvider.getText().toString()));
+                providerSelected(binding.editCustomProvider.getText().toString(),checkedId);
             }
         });
 
@@ -110,7 +145,12 @@ public class ProviderSelectionFragment extends BaseSetupFragment implements Canc
                 if (viewModel.isCustomProviderSelected()) {
                     setupActivityCallback.onSetupStepValidationChanged(viewModel.isValidConfig());
                     if (viewModel.isValidConfig()) {
-                        setupActivityCallback.onProviderSelected(new Provider(s.toString()));
+                        providerSelected(viewModel.getCustomUrl(),viewModel.getSelected());
+                        binding.syntaxCheckResult.setText(getString(R.string.validation_status_success));
+                        binding.syntaxCheckResult.setTextColor(getResources().getColor(R.color.green200));
+                    } else {
+                        binding.syntaxCheckResult.setText(getString(R.string.validation_status_failure));
+                        binding.syntaxCheckResult.setTextColor(getResources().getColor(R.color.red200));
                     }
                 }
             }
@@ -124,7 +164,39 @@ public class ProviderSelectionFragment extends BaseSetupFragment implements Canc
                 ViewHelper.hideKeyboardFrom(getContext(), v);
             }
         });
-        binding.providerRadioGroup.check(viewModel.getSelected());
+
+        binding.getRoot().getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            if(ViewHelper.isKeyboardShown(getContext())) {
+                binding.getRoot().smoothScrollTo(binding.editCustomProvider.getLeft(), binding.getRoot().getBottom());
+            }
+        });
+        providerSelectionChanged();
+    }
+
+    public void providerSelectionChanged(){
+        Provider provider = setupActivityCallback.getSelectedProvider();
+        if (provider != null && provider.hasIntroducer()) {
+            try {
+                binding.providerRadioGroup.check(INVITE_CODE_PROVIDER);
+                binding.editCustomProvider.setText(provider.getIntroducer().toUrl());
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+        } else {
+            binding.providerRadioGroup.check(viewModel.getSelected());
+        }
+    }
+
+    private void providerSelected(String string, int checkedId) {
+        if (checkedId == INVITE_CODE_PROVIDER) {
+            try {
+                setupActivityCallback.onProviderSelected(new Provider(Introducer.fromUrl(string)));
+            } catch (Exception e) {
+                // This cannot happen
+            }
+        } else {
+            setupActivityCallback.onProviderSelected(new Provider(string));
+        }
     }
 
     @Override
@@ -149,5 +221,14 @@ public class ProviderSelectionFragment extends BaseSetupFragment implements Canc
     @Override
     public void onCanceled() {
         binding.providerRadioGroup.check(0);
+    }
+
+    @Override
+    public void onScanResult(Introducer introducer) {
+        try {
+            binding.editCustomProvider.setText(introducer.toUrl());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

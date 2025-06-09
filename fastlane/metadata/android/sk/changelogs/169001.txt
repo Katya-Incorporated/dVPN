@@ -1,0 +1,3 @@
+• Založené na Bitmask v1.1.8
+• Nový certifikát CA
+• Aktualizované preklady

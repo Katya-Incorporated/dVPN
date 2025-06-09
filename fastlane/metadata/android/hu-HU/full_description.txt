@@ -1,0 +1,11 @@
+A CalyxVPN segítségével biztonságosan titkosítani tudja a hálózati forgalmát, és keresztül vezetheti a Calyx Intézeten.
+
+• Anonim VPN: Se felhasználói fiók, se naplózás.
+• Anonim IP Cím: Ha a VPN kapcsolat aktív, az összes szerver egy anonim Calyx-nál hosztolt címen fogja látni Önt.
+• Ingyenes: Ez egy ingyenes szolgáltatás a Calyx Intézettől.
+• Nyílt Forráskódú: Mind a szerver és kliens oldal 100%-ig ingyenes és nyílt forráskódú szoftver.
+• Nincs IPv6 Szivárgás: A CalyxVPN nem fog IPv6 forgalmat szivárogtatni (root szükséges).
+• Nincs DNS Szivárgás: A CalyxVPN a kliens és szerver oldalon is úgy kerül konfigurálásra, hogy a DNS nem szivárog ki. Minden DNS kérést a Calyx anonim módon kezel amikor a VPN be van kapcsolva.
+• Kijátszás: Amikor a "Hidak használata" bekapcsolásra kerül, minden forgalma normál web forgalomként maszkolódik a VPN forgalmat blokkoló rendszerek cenzúrájának elkerülése érdekében.
+
+Csakúgy mint minden VPN esetén, a CalyxVPN csak a hálózati adatforgalom biztonságossá tételében nyújt segítséget. Azonban nem tudja biztosítani ugyanezt a weboldalakon már korábban mentett vagy továbbadott adataival. Emellett nem blokkolja a követőket és reklámokat a böngészőjében (kivétel, ha ez a követés az Ön IP címén alapszik).

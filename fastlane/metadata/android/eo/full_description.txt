@@ -1,0 +1,8 @@
+Per CalyxVPN, vi povas sekure ĉifri viajn tutajn rettrafikojn kaj kursiligu ĝin per la Calyx Institute.
+
+•Anonima VPN: Neniom da uzantkontoj nek telemetrio
+•Anonima IP-Adreso: Kiam la VPNa interligo estas aktiva, ĉiuj serviloj en la reto vidus vin kiel ventana de anonima IP-adreso servinta de Calyx.
+•Senkosta: Ĉi tiu estas senkosta servo disponita per la Calyx Institute.
+•Liberfontkoda: Ambaŭ la aplikaĵo kaj servilo estas 100% liberaj kaj liberfontkodaj programoj.
+•Neniom da IPv6'aj Likoj: CalyxVPN ne likos trafikon IPv6'ajn (postulas root).
+•Neniom da DNS'aj Likoj: CalyxVPN agordita ambaŭ en la aplikaĵo kaj servilo preventi likadon DNS'an ajn. Ĉiuj DNS postuloj anonime traktis per Calyx kiam la VPN estas Ŝaltiĝas.

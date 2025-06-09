@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="terms_of_service_calyx">با استفاده از این برنامه شما با شرایط خدمات موجود در ttps://calyxinstitute.org/legal/terms-of-service موافقت می کنید.این سرویس همانطور که هست، بدون ضمانت ارائه می شود و برای افرادی در نظر گرفته شده است که برای بهتر کردن جهان تلاش می کنند.</string>
+    <string name="donate_message_calyx">Calyx VPN یک سرویس وی پی ان آسان، سریع و امن از موسسه Calyx است.شما میتوانید بیشتر بخوانید,و کمک مالی کنید در https://calyxinstitute.org.</string>
+</resources>

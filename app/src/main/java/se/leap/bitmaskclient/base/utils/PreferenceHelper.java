@@ -1,12 +1,19 @@
 package se.leap.bitmaskclient.base.utils;
 
 import static android.content.Context.MODE_PRIVATE;
+import static de.blinkt.openvpn.core.connection.Connection.TransportProtocol.TCP;
+import static se.leap.bitmaskclient.base.fragments.CensorshipCircumventionFragment.TUNNELING_AUTOMATICALLY;
+import static se.leap.bitmaskclient.base.fragments.CensorshipCircumventionFragment.TUNNELING_OBFS4;
+import static se.leap.bitmaskclient.base.fragments.CensorshipCircumventionFragment.TUNNELING_OBFS4_KCP;
+import static se.leap.bitmaskclient.base.fragments.CensorshipCircumventionFragment.TUNNELING_QUIC;
 import static se.leap.bitmaskclient.base.models.Constants.ALLOW_EXPERIMENTAL_TRANSPORTS;
 import static se.leap.bitmaskclient.base.models.Constants.ALLOW_TETHERING_BLUETOOTH;
 import static se.leap.bitmaskclient.base.models.Constants.ALLOW_TETHERING_USB;
 import static se.leap.bitmaskclient.base.models.Constants.ALLOW_TETHERING_WIFI;
 import static se.leap.bitmaskclient.base.models.Constants.ALWAYS_ON_SHOW_DIALOG;
 import static se.leap.bitmaskclient.base.models.Constants.CLEARLOG;
+import static se.leap.bitmaskclient.base.models.Constants.COUNTRYCODE;
+import static se.leap.bitmaskclient.base.models.Constants.CUSTOM_PROVIDER_DOMAINS;
 import static se.leap.bitmaskclient.base.models.Constants.DEFAULT_SHARED_PREFS_BATTERY_SAVER;
 import static se.leap.bitmaskclient.base.models.Constants.EIP_IS_ALWAYS_ON;
 import static se.leap.bitmaskclient.base.models.Constants.EIP_RESTART_ON_BOOT;
@@ -18,14 +25,18 @@ import static se.leap.bitmaskclient.base.models.Constants.LAST_UPDATE_CHECK;
 import static se.leap.bitmaskclient.base.models.Constants.LAST_USED_PROFILE;
 import static se.leap.bitmaskclient.base.models.Constants.OBFUSCATION_PINNING_CERT;
 import static se.leap.bitmaskclient.base.models.Constants.OBFUSCATION_PINNING_IP;
-import static se.leap.bitmaskclient.base.models.Constants.OBFUSCATION_PINNING_KCP;
 import static se.leap.bitmaskclient.base.models.Constants.OBFUSCATION_PINNING_LOCATION;
 import static se.leap.bitmaskclient.base.models.Constants.OBFUSCATION_PINNING_PORT;
+import static se.leap.bitmaskclient.base.models.Constants.OBFUSCATION_PINNING_PROTOCOL;
 import static se.leap.bitmaskclient.base.models.Constants.PREFERENCES_APP_VERSION;
 import static se.leap.bitmaskclient.base.models.Constants.PREFERRED_CITY;
 import static se.leap.bitmaskclient.base.models.Constants.PREFER_UDP;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_CONFIGURED;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_EIP_DEFINITION;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MODELS_BRIDGES;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MODELS_EIPSERVICE;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MODELS_GATEWAYS;
+import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MODELS_PROVIDER;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MOTD;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MOTD_HASHES;
 import static se.leap.bitmaskclient.base.models.Constants.PROVIDER_MOTD_LAST_SEEN;
@@ -39,12 +50,16 @@ import static se.leap.bitmaskclient.base.models.Constants.SHOW_EXPERIMENTAL;
 import static se.leap.bitmaskclient.base.models.Constants.USE_BRIDGES;
 import static se.leap.bitmaskclient.base.models.Constants.USE_IPv6_FIREWALL;
 import static se.leap.bitmaskclient.base.models.Constants.USE_OBFUSCATION_PINNING;
+import static se.leap.bitmaskclient.base.models.Constants.USE_PORT_HOPPING;
 import static se.leap.bitmaskclient.base.models.Constants.USE_SNOWFLAKE;
 import static se.leap.bitmaskclient.base.models.Constants.USE_SYSTEM_PROXY;
+import static se.leap.bitmaskclient.base.models.Constants.USE_TUNNEL;
+import static se.leap.bitmaskclient.base.utils.BitmaskCoreProvider.getBitmaskMobile;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 
 import androidx.annotation.VisibleForTesting;
@@ -56,9 +71,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.GeneralSecurityException;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -66,6 +82,7 @@ import java.util.Set;
 import de.blinkt.openvpn.VpnProfile;
 import de.blinkt.openvpn.core.NativeUtils;
 import se.leap.bitmaskclient.BuildConfig;
+import se.leap.bitmaskclient.base.models.Introducer;
 import se.leap.bitmaskclient.base.models.Provider;
 import se.leap.bitmaskclient.tor.TorStatusObservable;
 
@@ -141,13 +158,19 @@ public class PreferenceHelper {
                 provider.define(new JSONObject(preferences.getString(Provider.KEY, "")));
                 provider.setCaCert(preferences.getString(Provider.CA_CERT, ""));
                 provider.setVpnCertificate(preferences.getString(PROVIDER_VPN_CERTIFICATE, ""));
-                provider.setPrivateKey(preferences.getString(PROVIDER_PRIVATE_KEY, ""));
+                provider.setPrivateKeyString(preferences.getString(PROVIDER_PRIVATE_KEY, ""));
                 provider.setEipServiceJson(new JSONObject(preferences.getString(PROVIDER_EIP_DEFINITION, "")));
                 provider.setMotdJson(new JSONObject(preferences.getString(PROVIDER_MOTD, "")));
                 provider.setLastMotdSeen(preferences.getLong(PROVIDER_MOTD_LAST_SEEN, 0L));
                 provider.setLastMotdUpdate(preferences.getLong(PROVIDER_MOTD_LAST_UPDATED, 0L));
                 provider.setMotdLastSeenHashes(preferences.getStringSet(PROVIDER_MOTD_HASHES, new HashSet<>()));
-            } catch (MalformedURLException | JSONException e) {
+                provider.setModelsProvider(preferences.getString(PROVIDER_MODELS_PROVIDER, null));
+                provider.setService(preferences.getString(PROVIDER_MODELS_EIPSERVICE, null));
+                provider.setBridges(preferences.getString(PROVIDER_MODELS_BRIDGES, null));
+                provider.setGateways(preferences.getString(PROVIDER_MODELS_GATEWAYS, null));
+                provider.setIntroducer(getBitmaskMobile().getIntroducerURLByDomain(provider.getDomain()));
+
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -185,8 +208,56 @@ public class PreferenceHelper {
         }
     }
 
+    /**
+     *
+     * @return HashMap with main URL string as key and Provider as value
+     */
+    public static HashMap<String, Provider> getCustomProviders() {
+        Set<String> providerDomains = getCustomProviderDomains();
+        HashMap<String, Provider> customProviders = new HashMap<>();
+        for (String domain : providerDomains) {
+            String mainURL = preferences.getString(Provider.MAIN_URL + "." + domain, null);
+            if (mainURL != null) {
+                Introducer introducer = null;
+                try {
+                   introducer = Introducer.fromUrl(BitmaskCoreProvider.getBitmaskMobile().getIntroducerURLByDomain(domain));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                customProviders.put(mainURL, Provider.createCustomProvider(mainURL, domain, introducer));
+            }
+        }
+
+        return customProviders;
+    }
+
+    public static void setCustomProviders(Set<Provider> providers) {
+        Set<String> newProviderDomains = new HashSet<>();
+
+        // add
+        SharedPreferences.Editor editor = preferences.edit();
+        for (Provider provider : providers) {
+            String providerDomain = provider.getDomain();
+                    editor.putString(Provider.MAIN_URL + "." + providerDomain, provider.getMainUrl());
+            newProviderDomains.add(providerDomain);
+        }
+
+        // remove
+        Set<String> removedProviderDomains = getCustomProviderDomains();
+        removedProviderDomains.removeAll(newProviderDomains);
+        for (String providerDomain : removedProviderDomains) {
+            editor.remove(Provider.MAIN_URL + "." + providerDomain);
+        }
+
+        editor.putStringSet(CUSTOM_PROVIDER_DOMAINS, newProviderDomains);
+        editor.apply();
+    }
+
+    static Set<String> getCustomProviderDomains() {
+        return preferences.getStringSet(CUSTOM_PROVIDER_DOMAINS, new HashSet<>());
+    }
+
     // TODO: replace commit with apply after refactoring EIP
-    //FIXME: don't save private keys in shared preferences! use the keystore
     public static void storeProviderInPreferences(Provider provider, boolean async) {
         synchronized (LOCK) {
             SharedPreferences.Editor editor = preferences.edit();
@@ -195,16 +266,20 @@ public class PreferenceHelper {
                     putString(Provider.GEOIP_URL, provider.getGeoipUrl().toString()).
                     putString(Provider.MOTD_URL, provider.getMotdUrl().toString()).
                     putString(Provider.PROVIDER_API_IP, provider.getProviderApiIp()).
-                    putString(Provider.MAIN_URL, provider.getMainUrlString()).
+                    putString(Provider.MAIN_URL, provider.getMainUrl()).
                     putString(Provider.KEY, provider.getDefinitionString()).
                     putString(Provider.CA_CERT, provider.getCaCert()).
                     putString(PROVIDER_EIP_DEFINITION, provider.getEipServiceJsonString()).
-                    putString(PROVIDER_PRIVATE_KEY, provider.getPrivateKey()).
+                    putString(PROVIDER_PRIVATE_KEY, provider.getPrivateKeyString()).
                     putString(PROVIDER_VPN_CERTIFICATE, provider.getVpnCertificate()).
                     putString(PROVIDER_MOTD, provider.getMotdJsonString()).
                     putStringSet(PROVIDER_MOTD_HASHES, provider.getMotdLastSeenHashes()).
                     putLong(PROVIDER_MOTD_LAST_SEEN, provider.getLastMotdSeen()).
-                    putLong(PROVIDER_MOTD_LAST_UPDATED, provider.getLastMotdUpdate());
+                    putLong(PROVIDER_MOTD_LAST_UPDATED, provider.getLastMotdUpdate()).
+                    putString(PROVIDER_MODELS_GATEWAYS, provider.getGatewaysJson()).
+                    putString(PROVIDER_MODELS_BRIDGES, provider.getBridgesJson()).
+                    putString(PROVIDER_MODELS_EIPSERVICE, provider.getServiceJson()).
+                    putString(PROVIDER_MODELS_PROVIDER, provider.getModelsProviderJson());
             if (async) {
                 editor.apply();
             } else {
@@ -215,9 +290,9 @@ public class PreferenceHelper {
             preferences.edit().putBoolean(PROVIDER_CONFIGURED, true).
                     putString(Provider.PROVIDER_IP + "." + providerDomain, provider.getProviderIp()).
                     putString(Provider.PROVIDER_API_IP + "." + providerDomain, provider.getProviderApiIp()).
-                    putString(Provider.MAIN_URL + "." + providerDomain, provider.getMainUrlString()).
-                    putString(Provider.GEOIP_URL + "." + providerDomain, provider.getGeoipUrl().toString()).
-                    putString(Provider.MOTD_URL + "." + providerDomain, provider.getMotdUrl().toString()).
+                    putString(Provider.MAIN_URL + "." + providerDomain, provider.getMainUrl()).
+                    putString(Provider.GEOIP_URL + "." + providerDomain, provider.getGeoipUrl()).
+                    putString(Provider.MOTD_URL + "." + providerDomain, provider.getMotdUrl()).
                     putString(Provider.KEY + "." + providerDomain, provider.getDefinitionString()).
                     putString(Provider.CA_CERT + "." + providerDomain, provider.getCaCert()).
                     putString(PROVIDER_EIP_DEFINITION + "." + providerDomain, provider.getEipServiceJsonString()).
@@ -402,11 +477,16 @@ public class PreferenceHelper {
         putBoolean(USE_SNOWFLAKE, isEnabled);
         if (!isEnabled) {
             TorStatusObservable.setProxyPort(-1);
+            TorStatusObservable.setSocksProxyPort(-1);
         }
     }
 
     public static boolean hasSnowflakePrefs() {
         return hasKey(USE_SNOWFLAKE);
+    }
+
+    public static void resetSnowflakeSettings() {
+        removeKey(USE_SNOWFLAKE);
     }
 
     public static Boolean getUseSnowflake() {
@@ -470,8 +550,7 @@ public class PreferenceHelper {
     }
 
     public static boolean useObfuscationPinning() {
-        return BuildConfigHelper.useObfsVpn() &&
-                getUseBridges() &&
+        return getUseBridges() &&
                 getBoolean(USE_OBFUSCATION_PINNING, false) &&
                 !TextUtils.isEmpty(getObfuscationPinningIP()) &&
                 !TextUtils.isEmpty(getObfuscationPinningCert()) &&
@@ -510,16 +589,52 @@ public class PreferenceHelper {
         return getString(OBFUSCATION_PINNING_LOCATION, null);
     }
 
-    public static Boolean getObfuscationPinningKCP() {
-        return getBoolean(OBFUSCATION_PINNING_KCP, false);
+    public static String getObfuscationPinningProtocol() {
+        return getString(OBFUSCATION_PINNING_PROTOCOL, TCP.toString());
     }
 
-    public static void setObfuscationPinningKCP(boolean isKCP) {
-        putBoolean(OBFUSCATION_PINNING_KCP, isKCP);
+    public static void setObfuscationPinningProtocol(String protocol) {
+        putString(OBFUSCATION_PINNING_PROTOCOL, protocol);
     }
 
     public static void setUseIPv6Firewall(boolean useFirewall) {
         putBoolean(USE_IPv6_FIREWALL, useFirewall);
+    }
+
+    public static boolean getUsePortHopping() {
+        return getBoolean(USE_PORT_HOPPING, false);
+    }
+
+    public static void setUsePortHopping(boolean usePortHopping) {
+        putBoolean(USE_PORT_HOPPING, usePortHopping);
+    }
+
+    public  static boolean getUseObfs4() {
+        return getUseTunnel() == TUNNELING_OBFS4;
+    }
+
+    public static boolean getUseObfs4Kcp() {
+        return getUseTunnel() == TUNNELING_OBFS4_KCP;
+    }
+
+    public static boolean getUseObfs4Quic() {
+        return getUseTunnel() == TUNNELING_QUIC;
+    }
+
+    public static boolean useManualBridgeSettings() {
+        return getUseObfs4() || getUseObfs4Kcp() || getUseObfs4Quic() || getUsePortHopping();
+    }
+
+    public static boolean useManualDiscoverySettings() {
+        return hasSnowflakePrefs() && getUseSnowflake();
+    }
+
+    public static void setUseTunnel(int tunnel) {
+        putInt(USE_TUNNEL, tunnel);
+    }
+
+    public static int getUseTunnel() {
+        return getInt(USE_TUNNEL, TUNNELING_AUTOMATICALLY);
     }
 
     public static boolean useIpv6Firewall() {
@@ -532,6 +647,14 @@ public class PreferenceHelper {
 
     public static boolean getShowAlwaysOnDialog() {
         return getBoolean(ALWAYS_ON_SHOW_DIALOG, true);
+    }
+
+    public static String getBaseCountry() {
+        return getString(COUNTRYCODE, null);
+    }
+
+    public static void setBaseCountry(String countryCode) {
+        putString(COUNTRYCODE, countryCode);
     }
 
     public static String getPreferredCity() {
@@ -585,6 +708,12 @@ public class PreferenceHelper {
     public static Set<String> getExcludedApps() {
         synchronized (LOCK) {
             return preferences.getStringSet(EXCLUDED_APPS, new HashSet<>());
+        }
+    }
+
+    public static void removeKey(String key) {
+        synchronized (LOCK) {
+            preferences.edit().remove(key).apply();
         }
     }
 
@@ -695,4 +824,124 @@ public class PreferenceHelper {
             preferences.edit().clear().apply();
         }
         }
+
+        public static class SharedPreferenceStore implements mobilemodels.Store {
+
+            public SharedPreferenceStore() throws IllegalArgumentException {
+                if (preferences == null) {
+                    throw new IllegalStateException("Preferences not initialized.");
+                }
+            }
+            @Override
+            public void clear() throws Exception {
+                preferences.edit().clear().apply();
+            }
+
+            @Override
+            public void close() throws Exception {
+
+            }
+
+            @Override
+            public boolean contains(String s) throws Exception {
+                return preferences.contains(s);
+            }
+
+            @Override
+            public boolean getBoolean(String s) {
+                return preferences.getBoolean(s, false);
+            }
+
+            @Override
+            public boolean getBooleanWithDefault(String s, boolean b) {
+                return preferences.getBoolean(s, b);
+            }
+
+            @Override
+            public byte[] getByteArray(String s) {
+                String encodedString = preferences.getString(s, Arrays.toString(Base64.encode(new byte[0], Base64.DEFAULT)));
+                try {
+                    return Base64.decode(encodedString, Base64.DEFAULT);
+                } catch (IllegalArgumentException e) {
+                    return new byte[0];
+                }
+            }
+
+            @Override
+            public byte[] getByteArrayWithDefault(String s, byte[] bytes) {
+                String encodedString = preferences.getString(s, "");
+                try {
+                    return Base64.decode(encodedString, Base64.DEFAULT);
+                } catch (IllegalArgumentException e) {
+                    return bytes;
+                }
+            }
+
+            @Override
+            public long getInt(String s) {
+                return preferences.getInt(s, 0);
+            }
+
+            @Override
+            public long getIntWithDefault(String s, long l) {
+                return preferences.getInt(s, (int) l);
+            }
+
+            @Override
+            public long getLong(String s) {
+                return preferences.getLong(s, 0L);
+            }
+
+            @Override
+            public long getLongWithDefault(String s, long l) {
+                return preferences.getLong(s, l);
+            }
+
+            @Override
+            public String getString(String s) {
+                return preferences.getString(s, "");
+            }
+
+            @Override
+            public String getStringWithDefault(String s, String s1) {
+                return preferences.getString(s, s1);
+            }
+
+            @Override
+            public void open() throws Exception {
+
+            }
+
+            @Override
+            public void remove(String s) throws Exception {
+                preferences.edit().remove(s).apply();
+            }
+
+            @Override
+            public void setBoolean(String s, boolean b) {
+                preferences.edit().putBoolean(s, b).apply();
+            }
+
+            @Override
+            public void setByteArray(String s, byte[] bytes) {
+                String encodedString = Base64.encodeToString(bytes, Base64.DEFAULT);
+                preferences.edit().putString(s, encodedString).apply();
+            }
+
+            @Override
+            public void setInt(String s, long l) {
+                preferences.edit().putInt(s, (int) l).apply();
+            }
+
+            @Override
+            public void setLong(String s, long l) {
+                preferences.edit().putLong(s, l).apply();
+            }
+
+            @Override
+            public void setString(String s, String s1) {
+                preferences.edit().putString(s, s1).apply();
+            }
+        }
+
 }

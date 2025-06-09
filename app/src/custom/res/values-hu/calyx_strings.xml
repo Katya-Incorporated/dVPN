@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="donate_message_calyx">A Calyx VPN egy egyszerű, gyors és biztonságos VPN szolgáltatás a Calyx Intézet jóvoltából. Tovább tájékozódhat, vagy támogathatja a https://calyxinstitute.org oldalon.</string>
+    <string name="terms_of_service_calyx">Az által, hogy igénybe veszi ez az applikációt, beleegyezik a Felhasználói Feltételekbe, mely megtalálható a https://calyxinstitute.org/legal/terms-of-service oldalon. A szolgáltatás a jelenlegi állapotában elérhető mindenféle garancia nélkül, és azoknak az embereknek szántuk, akik szeretnék jobbá tenné a világunkat.</string>
+</resources>

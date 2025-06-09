@@ -1,3 +1,107 @@
+1.5.3 Obfuscation update release
+features:
+- provide support for quic as obfuscation protocol
+- improve bridge hopping mode
+bugfixes:
+- reduce obfuscated connection failure rates after changing settings
+- fix updating VPN certificate via APIv5
+- improve invite code validation
+- fix minor UI bugs in location selection and censorship circumvention settings
+- remove camera permission for custom branded clients
+
+1.5.2RC2 Obfuscation Update beta release
+bugfixes:
+- fix parsing invite code parameters, fixes bucket authentication
+
+1.5.2RC1 Obfuscation Update beta release
+features:
+- handle Quic as obfuscation protocol
+bugfixes:
+- fix parsing of hopping mode
+- fix fastlane directory structure, should fix meta data being picked up correctly by f-droid (thanks @lhr)
+
+1.5.1 stable
+features:
+- see 1.5.0RC2 API-v5 beta and 1.5.0RC1 API-v5 beta
+
+bugfixes:
+- fixed obfs4+kcp performance issues
+- handle panics in obfsvpn more gracefully
+- fix barcode scanner photo leak
+
+1.5.0RC2 API-v5 beta
+features:
+* replace MLKit with FOSS QR code scanning library zxing
+* implement auth token support for invite codes
+* updated translations
+
+bugfix:
+* fix typos in strings
+* fix introducer handling when switching providers
+* fix resetting obfuscation settings when switching providers
+* always default to bridges in case a provider was setup via an invite token
+* fix crash in obfsvpn
+* fix crash while entering invalid invite code
+
+1.5.0RC1 API-v5 beta
+features:
+- support new provider config API (beta)
+- allow to setup provider using an invite code and via an obfuscated proxy
+- new circumvention settings user interface
+- Add QR code scanning for invite code
+- in-app language picker
+- update openvpn and openssl
+- updated translations (<3<3<3 -> translators)
+bugfix:
+- fix support for ed25519 private VPN keys
+
+1.4.1 stable
+features:
+- update censorship circumvention library
+- support for provider setups with multiple bridges colocated with a gateway
+- translation updates (again love to all contributors)
+- stable releasing 1.4.0 Release Candidate features and fixes (see below)
+
+1.4.0RC2 pre-API-v5
+features:
+- mainly work under the hood to support future configuration API v5
+- support for elliptic curve private keys used in VPN setup
+- updated translations (many thanks to all translators!)
+
+1.4.0RC1 obfuscation update
+features:
+* update obfuscation library obfsvpn to version 1.0.0, with improved KCP support
+
+bugfixes:
+* fix text color of button in obfuscation proxy pinning dialog
+* fix auto-update mechanism for clients fetched from the download page
+
+1.3.1 hotfix
+bugfix:
+* fix app crash during provider setup in case the app is moved to background
+
+1.3.0
+features:
+* update golang to v. 1.22.2
+* update snowflake
+* update about screen
+
+bugfixes:
+* fix crash during provider setup
+* fix possible race condition which results in wrong connectivity state
+
+1.3.0RC1 maintenance Release
+features:
+* Support for Android 14
+* new translations (<3<3<3 to all translators!)
+
+bugfixes:
+* fixed manual provider entry
+* fixed fastlane meta data for app stores
+* fixed memory leak in VPN permission handling
+* fixed crash during provider setup
+* a lot of maintenance
+
 1.2.0
 features:
 * updated openvpn, openssl, tor, snowflake

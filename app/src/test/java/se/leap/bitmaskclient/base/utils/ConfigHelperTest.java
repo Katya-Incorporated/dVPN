@@ -1,6 +1,8 @@
 package se.leap.bitmaskclient.base.utils;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import com.tngtech.java.junit.dataprovider.DataProvider;
 import com.tngtech.java.junit.dataprovider.DataProviderRunner;
@@ -10,6 +12,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.modules.junit4.PowerMockRunnerDelegate;
+
+import java.io.IOException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+
+import se.leap.bitmaskclient.testutils.TestSetupHelper;
 
 @RunWith(PowerMockRunner.class)
 @PowerMockRunnerDelegate(DataProviderRunner.class)
@@ -57,4 +65,27 @@ public class ConfigHelperTest {
         assertEquals("domain.co.uk", ConfigHelper.getDomainFromMainURL("https://subdomain.domain.co.uk"));
         assertEquals("domain.co.uk", ConfigHelper.getDomainFromMainURL("https://domain.co.uk"));
     }
+
+    @Test
+    public void testGetDomainFromMainURL_returnNullIfInvalid() {
+        assertNull(ConfigHelper.getDomainFromMainURL("https://localhost"));
+        assertNull(ConfigHelper.getDomainFromMainURL("http://localhost"));
+        assertNull(ConfigHelper.getDomainFromMainURL("invalidrandomstring"));
+        assertNull(ConfigHelper.getDomainFromMainURL(null));
+    }
+
+    @Test
+    public void testParseX509CertificatesFromString() throws IOException {
+        ArrayList<X509Certificate> certs = ConfigHelper.parseX509CertificatesFromString(TestSetupHelper.getInputAsString(getClass().getClassLoader().getResourceAsStream("updated_cert.pem")));
+        assertTrue(certs != null);
+    }
+
+    @Test
+    public void testParseX509CertificatesToString() throws IOException {
+        String certsString = TestSetupHelper.getInputAsString(getClass().getClassLoader().getResourceAsStream("updated_cert.pem"));
+        ArrayList<X509Certificate> certs = ConfigHelper.parseX509CertificatesFromString(certsString);
+        String parsedCerts = ConfigHelper.parseX509CertificatesToString(certs);
+        assertEquals(certsString, parsedCerts);
+    }
+
 }

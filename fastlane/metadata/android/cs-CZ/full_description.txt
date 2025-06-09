@@ -1,0 +1,11 @@
+S CalyxVPN můžete bezpečně šifrovat veškerý síťový provoz a směrovat jej přes Calyx Institute.
+
+• Anonymní VPN: Žádné uživatelské účty a žádné přihlašování.
+• Anonymní IP adresa: Pokud je připojení VPN aktivní, všechny servery na internetu vás uvidí jako uživatele pocházejícího z anonymní IP adresy hostované organizací Calyx.
+• Zdarma: Jedná se o bezplatnou službu poskytovanou organizací Calyx Institute.
+• Otevřený zdroj: Klient i server jsou 100% svobodný software s otevřeným zdrojovým kódem.
+• Žádné úniky IPv6: CalyxVPN nepropouští provoz IPv6 (vyžaduje root).
+• Žádné úniky DNS: CalyxVPN je na straně klienta i serveru nakonfigurován tak, aby nedocházelo k únikům DNS. Všechny požadavky DNS jsou při zapnuté síti VPN anonymně zpracovávány organizací Calyx.
+• Obcházení: Když je povolena možnost „Použít mosty“, veškerý provoz je skrytý jako běžný webový provoz, aby bylo možné obejít některé cenzurní systémy, které blokují provoz VPN.
+
+Stejně jako u všech sítí VPN, i CalyxVPN pouze přidává zabezpečení vašim datům při jejich toku po síti. Nemůže chránit obsah vašich dat, která jsou uložena nebo která předáváte webovým stránkám. Rovněž nezabrání reklamě a sledování ve vašich aplikacích nebo webovém prohlížeči (s výjimkou případů, kdy je toto sledování založeno na vaší IP adrese).

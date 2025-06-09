@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="terms_of_service_calyx">Používáním této aplikace souhlasíte s podmínkami služby, které jsou k dispozici na adrese https://calyxinstitute.org/legal/terms-of-service. Tato služba je poskytována tak, jak je, bez jakékoli záruky a je určena lidem, kteří se snaží udělat svět lepším místem.</string>
+    <string name="donate_message_calyx">Calyx VPN je snadná, rychlá a bezpečná služba VPN od společnosti The Calyx Institute. Více informací naleznete na https://calyxinstitute.org, kde můžete také darovat příspěvek.</string>
+</resources>

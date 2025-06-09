@@ -61,32 +61,69 @@
                     android:layout_height="wrap_content"
                     >
                 </RadioGroup>
-                <androidx.appcompat.widget.LinearLayoutCompat
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:id="@+id/expandable_detail_container">
-                    <androidx.appcompat.widget.AppCompatTextView
-                        android:paddingTop="@dimen/stdpadding"
-                        android:id="@+id/provider_description"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        tools:text="@string/provider_description_riseup"/>
-                    <androidx.appcompat.widget.AppCompatEditText
-                        android:id="@+id/edit_customProvider"
-                        android:layout_marginVertical="@dimen/stdpadding"
-                        android:paddingHorizontal="@dimen/stdpadding"
-                        android:paddingVertical="@dimen/compact_padding"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@color/white"
-                        android:hint="https://example.org"
-                        android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-                        android:textColorHint="@color/black800_transparent"
-                        />
-                </androidx.appcompat.widget.LinearLayoutCompat>
             </androidx.appcompat.widget.LinearLayoutCompat>
         </androidx.cardview.widget.CardView>
+
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/activity_margin"
+            android:paddingBottom="@dimen/list_view_margin_top"
+            android:background="@color/color_provider_description_background"
+            android:id="@+id/expandable_detail_container">
+            <androidx.appcompat.widget.AppCompatTextView
+                android:paddingTop="@dimen/stdpadding"
+                android:id="@+id/provider_description"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:text="@string/provider_description_riseup"/>
+            <androidx.appcompat.widget.AppCompatEditText
+                android:id="@+id/edit_customProvider"
+                android:layout_marginVertical="@dimen/stdpadding"
+                android:paddingHorizontal="@dimen/stdpadding"
+                android:paddingVertical="@dimen/compact_padding"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/white"
+                tools:hint="https://example.org"
+                android:imeOptions="actionDone"
+                android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+                android:textColorHint="@color/black800_transparent"
+                />
+            <LinearLayout
+                android:id="@+id/syntax_check"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/syntax_check"/>
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/syntax_check_result"
+                    android:paddingStart="@dimen/stdpadding"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    tools:text="Good"/>
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/qr_scanner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingVertical="@dimen/stdpadding"
+                android:orientation="horizontal">
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btn_qr_scanner"
+                    android:padding="@dimen/stdpadding"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:drawableStart="@drawable/qr_code_scanner"
+                    android:text="@string/qr_scanner_prompt"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"/>
+            </LinearLayout>
+        </androidx.appcompat.widget.LinearLayoutCompat>
     </androidx.appcompat.widget.LinearLayoutCompat>
 
 </ScrollView>

@@ -1,5 +1,21 @@
 package se.leap.bitmaskclient.base.models;
 
+import static de.blinkt.openvpn.core.connection.Connection.TransportType.OBFS4_HOP;
+import static de.blinkt.openvpn.core.connection.Connection.TransportType.OPENVPN;
+import static se.leap.bitmaskclient.base.models.Constants.CAPABILITIES;
+import static se.leap.bitmaskclient.base.models.Constants.CERT;
+import static se.leap.bitmaskclient.base.models.Constants.HOP_JITTER;
+import static se.leap.bitmaskclient.base.models.Constants.IAT_MODE;
+import static se.leap.bitmaskclient.base.models.Constants.MAX_HOP_PORT;
+import static se.leap.bitmaskclient.base.models.Constants.MIN_HOP_PORT;
+import static se.leap.bitmaskclient.base.models.Constants.MIN_HOP_SECONDS;
+import static se.leap.bitmaskclient.base.models.Constants.PORTS;
+import static se.leap.bitmaskclient.base.models.Constants.PORT_COUNT;
+import static se.leap.bitmaskclient.base.models.Constants.PORT_SEED;
+import static se.leap.bitmaskclient.base.models.Constants.PROTOCOLS;
+import static se.leap.bitmaskclient.base.models.Constants.TRANSPORT;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.gson.FieldNamingPolicy;
@@ -7,29 +23,42 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.Serializable;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Vector;
 
 import de.blinkt.openvpn.core.connection.Connection;
+import io.swagger.client.model.ModelsBridge;
+import io.swagger.client.model.ModelsGateway;
 
 public class Transport implements Serializable {
-    private String type;
-    private String[] protocols;
+    private final String type;
+    private final String[] protocols;
     @Nullable
-    private String[] ports;
+    private final String[] ports;
     @Nullable
-    private Options options;
+    private final Options options;
 
     public Transport(String type, String[] protocols, String[] ports, String cert) {
         this(type, protocols, ports, new Options(cert, "0"));
     }
 
-    public Transport(String type, String[] protocols, String[] ports, Options options) {
+    public Transport(String type, String[] protocols, @Nullable String[] ports, @Nullable Options options) {
         this.type = type;
         this.protocols = protocols;
         this.ports = ports;
         this.options = options;
+    }
+
+    public Transport(String type, String[] protocols, @Nullable String[] ports) {
+        this.type = type;
+        this.protocols = protocols;
+        this.ports = ports;
+        this.options = null;
     }
 
     public String getType() {
@@ -67,12 +96,107 @@ public class Transport implements Serializable {
                 fromJson(json.toString(), Transport.class);
     }
 
+    public static Transport createTransportFrom(ModelsBridge modelsBridge) {
+        if (modelsBridge == null) {
+            return null;
+        }
+        Map<String, Object> options = modelsBridge.getOptions();
+        Transport.Options transportOptions = new Transport.Options((String) options.get(CERT), (String) options.get(IAT_MODE));
+        if (OBFS4_HOP.toString().equals(modelsBridge.getType())) {
+            transportOptions.minHopSeconds = getIntOption(options, MIN_HOP_SECONDS, 5);
+            transportOptions.minHopPort = getIntOption(options, MIN_HOP_PORT, 49152);
+            transportOptions.maxHopPort = getIntOption(options, MAX_HOP_PORT, 65535);
+            transportOptions.hopJitter = getIntOption(options, HOP_JITTER, 10);
+            transportOptions.portCount = getIntOption(options, PORT_COUNT, 100);
+            transportOptions.portSeed = getIntOption(options, PORT_SEED, 1);
+        }
+        Transport transport = new Transport(
+                modelsBridge.getType(),
+                new String[]{modelsBridge.getTransport()},
+                new String[]{String.valueOf(modelsBridge.getPort())},
+                transportOptions
+        );
+        return transport;
+    }
+
+    private static int getIntOption(Map<String, Object> options, String key, int defaultValue) {
+        try {
+            Object o = options.get(key);
+            if (o == null) {
+                return defaultValue;
+            }
+            if (o instanceof String) {
+                return Integer.parseInt((String) o);
+            }
+            return (int) o;
+        } catch (NullPointerException | ClassCastException | NumberFormatException e){
+            e.printStackTrace();
+            return defaultValue;
+        }
+    }
+
+    public static Transport createTransportFrom(ModelsGateway modelsGateway) {
+        if (modelsGateway == null) {
+            return null;
+        }
+        Transport transport = new Transport(
+                modelsGateway.getType(),
+                new String[]{modelsGateway.getTransport()},
+                new String[]{String.valueOf(modelsGateway.getPort())}
+        );
+        return transport;
+    }
+
+
+    @NonNull
+    public static Vector<Transport> createTransportsFrom(JSONObject gateway, int apiVersion) throws IllegalArgumentException {
+        Vector<Transport> transports = new Vector<>();
+        try {
+            if (apiVersion >= 3) {
+                JSONArray supportedTransports = gateway.getJSONObject(CAPABILITIES).getJSONArray(TRANSPORT);
+                for (int i = 0; i < supportedTransports.length(); i++) {
+                    Transport transport = Transport.fromJson(supportedTransports.getJSONObject(i));
+                    transports.add(transport);
+                }
+            } else {
+                JSONObject capabilities =  gateway.getJSONObject(CAPABILITIES);
+                JSONArray ports = capabilities.getJSONArray(PORTS);
+                JSONArray protocols = capabilities.getJSONArray(PROTOCOLS);
+                String[] portArray = new String[ports.length()];
+                String[] protocolArray = new String[protocols.length()];
+                for (int i = 0; i < ports.length(); i++) {
+                    portArray[i] = String.valueOf(ports.get(i));
+                }
+                for (int i = 0; i < protocols.length(); i++) {
+                    protocolArray[i] = protocols.optString(i);
+                }
+                Transport transport = new Transport(OPENVPN.toString(), protocolArray, portArray);
+                transports.add(transport);
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException();
+            //throw new ConfigParser.ConfigParseError("Api version ("+ apiVersion +") did not match required JSON fields");
+        }
+        return transports;
+    }
+
+    public static Vector<Transport> createTransportsFrom(ModelsBridge modelsBridge) {
+        Vector<Transport> transports = new Vector<>();
+        transports.add(Transport.createTransportFrom(modelsBridge));
+        return transports;
+    }
+
+    public static Vector<Transport> createTransportsFrom(ModelsGateway modelsGateway) {
+        Vector<Transport> transports = new Vector<>();
+        transports.add(Transport.createTransportFrom(modelsGateway));
+        return transports;
+    }
+
     public static class Options implements Serializable {
         @Nullable
-        private String cert;
+        private final String cert;
         @SerializedName("iatMode")
-        private String iatMode;
-
+        private final String iatMode;
         @Nullable
         private Endpoint[] endpoints;
 
@@ -81,23 +205,30 @@ public class Transport implements Serializable {
         private int portSeed;
 
         private int portCount;
-
+        private int minHopPort;
+        private int maxHopPort;
+        private int minHopSeconds;
+        private int hopJitter;
 
         public Options(String cert, String iatMode) {
             this.cert = cert;
             this.iatMode = iatMode;
         }
 
-        public Options(String iatMode, Endpoint[] endpoints, int portSeed, int portCount, boolean experimental) {
-            this(iatMode, endpoints, null, portSeed, portCount, experimental);
+        public Options(String iatMode, Endpoint[] endpoints, int portSeed, int portCount, int minHopPort, int maxHopPort, int minHopSeconds, int hopJitter, boolean experimental) {
+            this(iatMode, endpoints, null, portSeed, portCount, minHopPort, maxHopPort, minHopSeconds, hopJitter, experimental);
         }
 
-        public Options(String iatMode, Endpoint[] endpoints, String cert, int portSeed, int portCount, boolean experimental) {
+        public Options(String iatMode, Endpoint[] endpoints, String cert, int portSeed, int portCount,  int minHopPort, int maxHopPort, int minHopSeconds, int hopJitter, boolean experimental) {
             this.iatMode = iatMode;
             this.endpoints = endpoints;
             this.portSeed = portSeed;
             this.portCount = portCount;
             this.experimental = experimental;
+            this.minHopPort = minHopPort;
+            this.maxHopPort = maxHopPort;
+            this.minHopSeconds = minHopSeconds;
+            this.hopJitter = hopJitter;
             this.cert = cert;
         }
 
@@ -128,6 +259,22 @@ public class Transport implements Serializable {
             return portCount;
         }
 
+        public int getMinHopPort() {
+            return minHopPort;
+        }
+
+        public int getMaxHopPort() {
+            return maxHopPort;
+        }
+
+        public int getMinHopSeconds() {
+            return minHopSeconds;
+        }
+
+        public int getHopJitter() {
+            return hopJitter;
+        }
+
         @Override
         public String toString() {
             return new Gson().toJson(this);
@@ -136,8 +283,8 @@ public class Transport implements Serializable {
 
 
     public static class Endpoint implements Serializable {
-        private String ip;
-        private String cert;
+        private final String ip;
+        private final String cert;
 
         public Endpoint(String ip, String cert) {
             this.ip = ip;
