@@ -409,7 +409,7 @@ dependencies {
 
   testImplementation 'org.json:json:20250517'
   androidTestImplementation 'androidx.test.ext:junit:1.1.4'
-  debugImplementation 'com.squareup.leakcanary:leakcanary-android-core:2.9.1'
+  debugImplementation 'com.squareup.leakcanary:leakcanary-android-core:2.14'
   debugImplementation 'androidx.fragment:fragment-testing:1.6.2'
   debugImplementation 'androidx.test:core:1.5.0'
 
