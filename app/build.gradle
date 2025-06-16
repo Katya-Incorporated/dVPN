@@ -410,7 +410,7 @@ dependencies {
   testImplementation 'org.json:json:20250517'
   androidTestImplementation 'androidx.test.ext:junit:1.1.4'
   debugImplementation 'com.squareup.leakcanary:leakcanary-android-core:2.9.1'
-  debugImplementation 'androidx.fragment:fragment-testing:1.6.2'
+  debugImplementation 'androidx.fragment:fragment-testing:1.8.8'
   debugImplementation 'androidx.test:core:1.5.0'
 
   implementation 'com.google.code.gson:gson:2.10.1'
@@ -425,7 +425,7 @@ dependencies {
   implementation 'androidx.core:core:1.12.0'
   implementation 'androidx.appcompat:appcompat:1.6.1'
   implementation 'com.google.android.material:material:1.12.0'
-  implementation 'androidx.fragment:fragment:1.6.2'
+  implementation 'androidx.fragment:fragment:1.8.8'
   implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
   implementation 'androidx.multidex:multidex:2.0.1'
   implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
