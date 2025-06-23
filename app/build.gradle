@@ -396,7 +396,7 @@ dependencies {
   testImplementation 'org.powermock:powermock-module-junit4:2.0.9'
   testImplementation 'org.powermock:powermock-core:2.0.9'
   testImplementation 'org.powermock:powermock-module-junit4-rule:2.0.9'
-  testImplementation group: 'com.tngtech.java', name: 'junit-dataprovider', version: '1.10.0'
+  testImplementation group: 'com.tngtech.java', name: 'junit-dataprovider', version: '1.13.1'
 
   androidTestImplementation 'org.mockito:mockito-core:5.18.0'
   androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
