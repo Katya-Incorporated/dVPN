@@ -13,7 +13,7 @@ buildscript {
 }
 
 plugins {
-  id "org.ajoberstar.grgit" version "1.2.0-milestone.5"
+  id "org.ajoberstar.grgit" version "5.3.2"
 }
 
 allprojects {
