@@ -411,7 +411,7 @@ dependencies {
   androidTestImplementation 'androidx.test.ext:junit:1.2.1'
   debugImplementation 'com.squareup.leakcanary:leakcanary-android-core:2.14'
   debugImplementation 'androidx.fragment:fragment-testing:1.6.2'
-  debugImplementation 'androidx.test:core:1.6.1'
+  debugImplementation 'androidx.test:core:1.7.0'
 
   implementation 'com.google.code.gson:gson:2.13.1'
   implementation 'com.squareup.okhttp3:okhttp:5.1.0'
