@@ -399,9 +399,9 @@ dependencies {
   testImplementation group: 'com.tngtech.java', name: 'junit-dataprovider', version: '1.13.1'
 
   androidTestImplementation 'org.mockito:mockito-core:5.18.0'
-  androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+  androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
   androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.7.0'
-  androidTestImplementation 'androidx.test.espresso:espresso-intents:3.6.1'
+  androidTestImplementation 'androidx.test.espresso:espresso-intents:3.7.0'
   androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'
 
   androidTestImplementation 'tools.fastlane:screengrab:2.1.1'
