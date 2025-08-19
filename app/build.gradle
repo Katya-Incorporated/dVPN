@@ -386,7 +386,7 @@ android {
 dependencies {
   testImplementation 'junit:junit:4.13.2'
   //outdated mockito-core version due to powermock dependency
-  testImplementation 'org.mockito:mockito-core:5.18.0'
+  testImplementation 'org.mockito:mockito-core:5.19.0'
   testImplementation('org.powermock:powermock-api-mockito2:2.0.9')
        //   { exclude group: 'junit' exclude group: 'org.mockito' }
 
@@ -398,7 +398,7 @@ dependencies {
   testImplementation 'org.powermock:powermock-module-junit4-rule:2.0.9'
   testImplementation group: 'com.tngtech.java', name: 'junit-dataprovider', version: '1.13.1'
 
-  androidTestImplementation 'org.mockito:mockito-core:5.18.0'
+  androidTestImplementation 'org.mockito:mockito-core:5.19.0'
   androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
   androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.7.0'
   androidTestImplementation 'androidx.test.espresso:espresso-intents:3.7.0'
@@ -422,7 +422,7 @@ dependencies {
   implementation 'androidx.legacy:legacy-support-core-utils:1.0.0'
   implementation 'androidx.annotation:annotation:1.9.1'
   implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-  implementation 'androidx.core:core:1.12.0'
+  implementation 'androidx.core:core:1.17.0'
   implementation 'androidx.appcompat:appcompat:1.7.1'
   implementation 'com.google.android.material:material:1.12.0'
   implementation 'androidx.fragment:fragment:1.8.9'
@@ -434,7 +434,7 @@ dependencies {
   // swagger dependencies
   implementation 'io.swagger:swagger-annotations:1.6.16'
   implementation 'io.gsonfire:gson-fire:1.8.0'
-  implementation 'org.threeten:threetenbp:1.7.1'
+  implementation 'org.threeten:threetenbp:1.7.2'
 
   // Start:: QR Code Scanner
   normalImplementation 'com.journeyapps:zxing-android-embedded:4.3.0'
